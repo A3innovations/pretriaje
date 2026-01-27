@@ -168,7 +168,7 @@ function PanelContent() {
                                 <tr><td colSpan={6} className="px-6 py-12 text-center text-slate-400">No hay pacientes</td></tr>
                             ) : (
                                 filtered.map(s => (
-                                    <tr key={s.id} className="hover:bg-slate-50 transition-colors group">
+                                    <tr key={s.id} className={`transition-colors group ${!(s as any).reviewed ? 'bg-amber-50 hover:bg-amber-100' : 'hover:bg-slate-50'}`}>
                                         <td className="px-6 py-4 font-mono font-bold text-slate-700">{s.worker_id}</td>
                                         <td className="px-6 py-4 font-medium text-slate-900">{s.answers?.['firstname'] || s.answers?.['name'] || "Sin nombre"}</td>
                                         <td className="px-6 py-4 text-slate-500 text-sm">

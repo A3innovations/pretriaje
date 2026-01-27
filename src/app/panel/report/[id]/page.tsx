@@ -130,9 +130,9 @@ export default function ReportPage() {
                                 </p>
                             </div>
                         </div>
-                        <div className="hidden md:block opacity-80 font-mono text-sm tracking-widest border border-white/30 px-3 py-1 rounded">
+                        {/* <div className="hidden md:block opacity-80 font-mono text-sm tracking-widest border border-white/30 px-3 py-1 rounded">
                             STATUS: OK
-                        </div>
+                        </div> */}
                     </div>
                 )}
 
