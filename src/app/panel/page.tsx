@@ -177,8 +177,12 @@ function PanelContent() {
                                         <td className="px-6 py-4">{getPriorityBadge(s.red_flag_score)}</td>
                                         <td className="px-6 py-4">
                                             {(s as any).reviewed ?
-                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-slate-100 text-slate-500">Revisado</span> :
-                                                <span className="inline-flex items-center px-2 py-1 rounded text-xs font-medium bg-blue-50 text-blue-600">Pendiente</span>
+                                                <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
+                                                    <CheckCircle size={14} className="mr-1.5" strokeWidth={2.5} /> REVISADO
+                                                </span> :
+                                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-white text-slate-400 border border-slate-200">
+                                                    Pendiente
+                                                </span>
                                             }
                                         </td>
                                         <td className="px-6 py-4 text-right">

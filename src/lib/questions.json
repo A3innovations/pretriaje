@@ -32,19 +32,10 @@
       "text": "Este cuestionario sirve para orientar el reconocimiento de vigilancia de la salud según los riesgos del puesto. No sustituye la valoración médica."
     },
     {
-      "id": "q0_2_consent",
-      "type": "multi",
-      "text": "Consentimiento",
-      "required": true,
-      "options": [
-        "He leído la información y consiento el tratamiento de mis datos de salud para vigilancia de la salud laboral.",
-        "Acepto que se me contacte si hay respuestas que requieran aclaración médica."
-      ]
-    },
-    {
       "id": "q0_3_contact",
       "type": "single",
       "text": "¿Cuál es tu canal preferido de contacto?",
+      "required": true,
       "options": [
         "Teléfono",
         "Email",

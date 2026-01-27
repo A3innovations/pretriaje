@@ -92,14 +92,13 @@ export default function WizardPage() {
     const handleNext = () => {
         if (!currentQuestion) return;
 
-        const val = answers[currentQuestion.id];
-        const isEmpty = val === undefined || val === "" || (Array.isArray(val) && val.length === 0);
+        // Strict validation: check for undefined, null, empty string, or empty array.
+        // Also check if it's an object with all empty keys (unlikely but safe).
+        const isEmpty = val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
 
         if (currentQuestion.required && isEmpty) {
-            // Shake animation or subtle toast? For now native alert is safest fallback, 
-            // but let's try a custom UI state or just rely on disabling button?
-            // Let's alert for now.
-            alert("Por favor, selecciona una opción.");
+            // Shake or Alert
+            alert("⚠️ Esta pregunta es obligatoria. Por favor selecciona una respuesta.");
             return;
         }
 
