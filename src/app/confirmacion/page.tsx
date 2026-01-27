@@ -36,12 +36,12 @@ export default function ConfirmationPage() {
         const margin = 20;
 
         // Helpers
+        // Helpers
         const checkPageBreak = (spaceNeeded: number) => {
-            // Strict 20mm margin (doc height ~297mm). Stop at 277mm.
-            // Extra safety buffer of 10mm -> 267mm.
-            if (yPos + spaceNeeded > pageHeight - margin - 5) {
+            // ULTRA STRICT: Page is 297mm. Margin 20mm. Stop at 260mm for safety.
+            if (yPos + spaceNeeded > 260) {
                 doc.addPage();
-                yPos = 20;
+                yPos = 30; // Reset top with generous margin
             }
         };
 
@@ -185,7 +185,7 @@ export default function ConfirmationPage() {
             const col2W = 80;
 
             const labelLines = doc.splitTextToSize(label, col1W);
-            const labelHeight = labelLines.length * 4.5; // Slightly more leading
+            const labelHeight = labelLines.length * 5; // Slightly more leading
 
             doc.setFont("helvetica", "normal"); // Default value font
             doc.setFontSize(10); // Standard readable size
@@ -200,19 +200,19 @@ export default function ConfirmationPage() {
             const valLines = doc.splitTextToSize(value, col2W);
             const valHeight = valLines.length * 5;
 
-            const rowHeight = Math.max(labelHeight, valHeight) + 6; // Padding
+            const rowHeight = Math.max(labelHeight, valHeight) + 8; // Extra padding
 
-            // Page Break Check - STRICT
-            if (yPos + rowHeight > pageHeight - margin - 5) {
+            // Page Break Check - STRICT 260mm LIMIT
+            if (yPos + rowHeight > 260) {
                 doc.addPage();
-                yPos = margin + 10; // Reset top
+                yPos = 30; // Reset top
             }
 
             // Draw Label
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9);
             doc.setTextColor(100, 116, 139);
-            doc.text(labelLines, col1X, yPos + 3);
+            doc.text(labelLines, col1X, yPos + 4);
 
             // Draw Value
             if (isRisk) {
@@ -222,7 +222,7 @@ export default function ConfirmationPage() {
                 doc.setFont("helvetica", "normal");
                 doc.setTextColor(15, 23, 42);
             }
-            doc.text(valLines, col2X, yPos + 3);
+            doc.text(valLines, col2X, yPos + 4);
 
             // Divider Line
             if (!isLast) {

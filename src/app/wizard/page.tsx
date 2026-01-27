@@ -111,7 +111,10 @@ export default function WizardPage() {
         }
     };
 
+    const [processing, setProcessing] = useState(false);
+
     const handleNext = async () => {
+        if (processing) return; // Prevent double click
         if (!currentQuestion) return;
 
         // Strict validation: check for undefined, null, empty string, or empty array.
@@ -128,8 +131,9 @@ export default function WizardPage() {
             return;
         }
 
+        setProcessing(true);
         // Save background
-        saveSession(answers);
+        await saveSession(answers).catch(() => { }); // Wait for save just in case, catch error
 
         const currIdx = allQuestions.findIndex(q => q.id === currentQuestion.id);
 
@@ -151,6 +155,8 @@ export default function WizardPage() {
             nextIdx++;
             loopCount++;
         }
+
+        setProcessing(false);
 
         if (nextIdx >= allQuestions.length) {
             router.push("/revision");
