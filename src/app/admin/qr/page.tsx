@@ -29,7 +29,7 @@ export default function AdminQRPage() {
     };
 
     const rotateToken = async (silent = false) => {
-        if (!silent && !confirm("¿Generar nuevo QR? El anterior dejará de funcionar inmediatamente.")) return;
+        // if (!silent && !confirm("¿Generar nuevo QR? El anterior dejará de funcionar inmediatamente.")) return; // Removed to prevent blocking issues
 
         if (!silent) setLoading(true); // Only show loader on manual action
         try {
@@ -193,8 +193,8 @@ export default function AdminQRPage() {
                         <button
                             onClick={copyToClipboard}
                             className={`w-full h-16 text-base font-bold rounded-2xl transition-all flex items-center justify-between px-6 active:scale-95 ${copied
-                                    ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
-                                    : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700'
+                                ? 'bg-emerald-500 text-white shadow-lg shadow-emerald-200'
+                                : 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 hover:bg-indigo-700'
                                 }`}
                         >
                             <span>{copied ? '¡URL Copiada!' : 'Copiar Enlace Público'}</span>
