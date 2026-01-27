@@ -77,30 +77,53 @@ export default function WizardPage() {
     }, [currentQuestion, allQuestions]);
 
     // -- Handlers --
-    const handleAnswerChange = (val: any) => {
-        setAnswers(prev => ({ ...prev, [currentQId!]: val }));
-        // fire-and-forget save
-        if (sessionId) {
-            fetch(`/api/session/${sessionId}`, {
+    const saveSession = async (currentAnswers: Record<string, any>) => {
+        if (!sessionId) return;
+        try {
+            await fetch(`/api/session/${sessionId}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ answers: { ...answers, [currentQId!]: val } })
+                body: JSON.stringify({ answers: currentAnswers })
             });
+        } catch (e) {
+            console.error("Save error", e);
         }
     };
 
-    const handleNext = () => {
+    const handleAnswerChange = (val: any) => {
+        setAnswers(prev => ({ ...prev, [currentQId!]: val }));
+        // Removed fetch per keystroke for performance. 
+        // We now save on Next/Back navigation events.
+    };
+
+    const handleBack = async () => {
+        // Save current progress before going back
+        await saveSession(answers);
+
+        if (history.length > 0) {
+            const prev = history[history.length - 1];
+            setHistory(history.slice(0, -1));
+            setCurrentQId(prev);
+            window.scrollTo(0, 0); // Comfortable scroll to top
+        } else {
+            router.push("/identificacion");
+        }
+    };
+
+    const handleNext = async () => {
         if (!currentQuestion) return;
 
         // Strict validation: check for undefined, null, empty string, or empty array.
-        // Also check if it's an object with all empty keys (unlikely but safe).
+        const val = answers[currentQuestion.id];
         const isEmpty = val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
 
         if (currentQuestion.required && isEmpty) {
-            // Shake or Alert
             alert("⚠️ Esta pregunta es obligatoria. Por favor selecciona una respuesta.");
             return;
         }
+
+        // Save progress before moving forward
+        await saveSession(answers);
 
         const currIdx = allQuestions.findIndex(q => q.id === currentQuestion.id);
         let nextIdx = currIdx + 1;
@@ -181,15 +204,7 @@ export default function WizardPage() {
             <div className="fixed bottom-0 left-0 w-full bg-white border-t border-slate-200 p-6 z-30 shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
                 <div className="max-w-md mx-auto flex gap-4">
                     <button
-                        onClick={() => {
-                            if (history.length > 0) {
-                                const prev = history[history.length - 1];
-                                setHistory(history.slice(0, -1));
-                                setCurrentQId(prev);
-                            } else {
-                                router.push("/identificacion");
-                            }
-                        }}
+                        onClick={handleBack}
                         className="w-14 h-14 flex items-center justify-center rounded-xl border border-slate-200 text-slate-500 hover:bg-slate-50 transition-colors"
                         aria-label="Atrás"
                     >
