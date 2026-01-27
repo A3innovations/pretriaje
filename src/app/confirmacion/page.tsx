@@ -152,8 +152,27 @@ export default function ConfirmationPage() {
         yPos += 5;
 
         // --- SECTIONS: MODULES ---
+        // Helper to check for risks/red flags
+        const checkRisk = (id: string, val: string) => {
+            const v = val.toLowerCase();
+            // General rule: "Sí" is a risk for symptoms/history
+            // Exceptions: Protection usage, Healthy habits (none in this questionnaire mostly, it's risk focused)
+
+            // Specific Logic
+            if (id === 'qc_1_noise_prot') return v === 'nunca' || v === 'no aplica' || v === 'no'; // Not using protection is risk
+            if (id === 'qe_3_bio_vac_hep' || id === 'qe_3_bio_vac_tet') return v === 'no' || v === 'incompleta'; // No vaxx is risk
+
+            // For most symptoms, diseases, limitations:
+            if (v.startsWith('sí') || v.startsWith('si')) return true;
+            if (v.startsWith('frecuente')) return true;
+            if (v.startsWith('a veces') && (id.includes('dizzyness') || id.includes('seizure') || id.includes('vertigo'))) return true;
+
+            return false;
+        };
+
+        // --- SECTIONS: MODULES ---
         // Helper to draw a row with robust height calculation
-        const printRow = (label: string, value: string, isLast = false) => {
+        const printRow = (label: string, value: string, isLast = false, isRisk = false) => {
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9); // Larger, clearer label
             doc.setTextColor(100, 116, 139); // Slate 500
@@ -167,9 +186,15 @@ export default function ConfirmationPage() {
             const labelLines = doc.splitTextToSize(label, col1W);
             const labelHeight = labelLines.length * 4.5; // Slightly more leading
 
-            doc.setFont("helvetica", "normal");
+            doc.setFont("helvetica", "normal"); // Default value font
             doc.setFontSize(10); // Standard readable size
-            doc.setTextColor(15, 23, 42); // Slate 900
+
+            if (isRisk) {
+                doc.setFont("helvetica", "bold"); // Bold for risk
+                doc.setTextColor(220, 38, 38);   // Red 600 for risk
+            } else {
+                doc.setTextColor(15, 23, 42);    // Slate 900 normal
+            }
 
             const valLines = doc.splitTextToSize(value, col2W);
             const valHeight = valLines.length * 5;
@@ -182,15 +207,20 @@ export default function ConfirmationPage() {
                 yPos = margin + 10; // Reset top
             }
 
-            // Draw
+            // Draw Label
             doc.setFont("helvetica", "bold");
             doc.setFontSize(9);
             doc.setTextColor(100, 116, 139);
             doc.text(labelLines, col1X, yPos + 3);
 
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
-            doc.setTextColor(15, 23, 42);
+            // Draw Value
+            if (isRisk) {
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(220, 38, 38);
+            } else {
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(15, 23, 42);
+            }
             doc.text(valLines, col2X, yPos + 3);
 
             // Divider Line
@@ -214,7 +244,8 @@ export default function ConfirmationPage() {
                     ? session.answers[q.id].join(", ")
                     : String(session.answers[q.id]);
 
-                printRow(label, val);
+                const isRisk = checkRisk(q.id, val);
+                printRow(label, val, false, isRisk);
             }
         });
 
@@ -258,7 +289,8 @@ export default function ConfirmationPage() {
                         ? session.answers[q.id].join(", ")
                         : String(session.answers[q.id]);
 
-                    printRow(q.text, val, idx === mod.questions.length - 1);
+                    const isRisk = checkRisk(q.id, val);
+                    printRow(q.text, val, idx === mod.questions.length - 1, isRisk);
                 }
             });
             yPos += 8;
