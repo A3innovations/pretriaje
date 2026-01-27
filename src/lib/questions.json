@@ -1,477 +1,802 @@
 {
-  "version": "q_v1.0",
+  "version": "3.0.0",
   "ui": {
-    "max_options": 6,
-    "other_char_limit": 160,
+    "max_options": 15,
+    "other_char_limit": 200,
     "show_progress": true
   },
+  "scoring": {
+    "redFlagScoreMap": {},
+    "priorityLevels": [
+      {
+        "minScore": 5,
+        "label": "Prioridad Alta"
+      },
+      {
+        "minScore": 3,
+        "label": "Prioridad Media"
+      },
+      {
+        "minScore": 0,
+        "label": "Normal"
+      }
+    ]
+  },
   "start_ack": {
-    "text": "Este pre-triaje solo recopila información para agilizar tu reconocimiento. Será revisado por personal sanitario.",
-    "consent_checkbox": {
-      "label": "Entiendo y continúo",
-      "required": false,
-      "version": "ack_v1"
-    }
+    "text": "Bienvenido al cuestionario de Pre-Triaje."
   },
   "core": [
     {
-      "id": "visit_type",
-      "type": "single",
-      "text": "Tipo de reconocimiento",
-      "options": [
-        "Inicial",
-        "Periódico",
-        "Cambio de puesto",
-        "Tras baja",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true
+      "id": "q0_1_info",
+      "type": "info",
+      "text": "Este cuestionario sirve para orientar el reconocimiento de vigilancia de la salud según los riesgos del puesto. No sustituye la valoración médica."
     },
     {
-      "id": "job_area",
-      "type": "single",
-      "text": "¿Qué describe mejor tu trabajo?",
+      "id": "q0_2_consent",
+      "type": "multi",
+      "text": "Consentimiento",
+      "required": true,
       "options": [
-        "Oficina/pantallas",
-        "Almacén/logística",
-        "Fábrica/producción",
-        "Conducción/maquinaria",
-        "Construcción/obras",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true
+        "He leído la información y consiento el tratamiento de mis datos de salud para vigilancia de la salud laboral.",
+        "Acepto que se me contacte si hay respuestas que requieran aclaración médica."
+      ]
     },
     {
-      "id": "tenure",
+      "id": "q0_3_contact",
       "type": "single",
-      "text": "Tiempo en el puesto actual",
+      "text": "¿Cuál es tu canal preferido de contacto?",
+      "options": [
+        "Teléfono",
+        "Email",
+        "Mensaje interno app",
+        "Otro (especificar)"
+      ]
+    },
+    {
+      "id": "q1_1_role",
+      "type": "single",
+      "text": "¿Cuál es tu puesto o rol actual?",
+      "placeholder": "Busca tu puesto...",
+      "options": [
+        "Administración",
+        "Docencia",
+        "Conducción",
+        "Almacén",
+        "Sanitario",
+        "Limpieza",
+        "Construcción",
+        "Industria",
+        "Hostelería",
+        "Otro (especificar)"
+      ]
+    },
+    {
+      "id": "q1_2_seniority",
+      "type": "single",
+      "text": "¿Cuál es tu antigüedad en el puesto?",
       "options": [
         "< 3 meses",
-        "3–12 meses",
-        "1–5 años",
+        "3 – 12 meses",
+        "1 – 5 años",
         "> 5 años",
         "Otro (especificar)"
-      ],
-      "other": true
+      ]
     },
     {
-      "id": "exposures",
-      "type": "multi",
-      "text": "Exposiciones habituales (marca las que apliquen)",
-      "options": [
-        "Pantallas",
-        "Cargas/esfuerzo",
-        "Ruido",
-        "Polvo/humos",
-        "Químicos",
-        "Vibración",
-        "Alturas",
-        "Riesgo biológico",
-        "Conducción/maquinaria",
-        "Temperaturas extremas",
-        "Ninguna",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true
-    },
-    {
-      "id": "chronic_any",
+      "id": "q1_3_shift",
       "type": "single",
-      "text": "¿Tienes alguna condición médica crónica?",
+      "text": "¿Cuál es tu turno de trabajo?",
       "options": [
-        "No",
-        "Sí",
-        "No lo sé",
-        "Prefiero no decir",
+        "Partido",
+        "Continuo",
+        "Noches",
+        "Rotatorio",
         "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true
+      ]
     },
     {
-      "id": "chronic_list",
+      "id": "q1_4_tasks",
       "type": "multi",
-      "text": "¿Cuál(es)?",
+      "text": "Selecciona tus tareas principales (máximo 3)",
+      "required": true,
       "options": [
-        "Hipertensión",
-        "Diabetes",
-        "Asma/EPOC",
-        "Cardiaca",
-        "Neurológica",
-        "Salud mental",
-        "Otra (especificar)"
-      ],
-      "other": true,
+        "Pantallas (Oficina)",
+        "Atención al público",
+        "Manipulación de cargas",
+        "Conducción",
+        "Uso de maquinaria",
+        "Trabajo en altura",
+        "Productos químicos",
+        "Agentes biológicos",
+        "Ruido elevado",
+        "Vibraciones",
+        "Movimientos repetitivos",
+        "Otro (especificar)"
+      ]
+    },
+    {
+      "id": "q1_5_accidents",
+      "type": "single",
+      "text": "¿Has tenido exposición accidental o intensa en el último año? (ej. derrame, pinchazo, humo...)",
+      "options": [
+        "Sí",
+        "No",
+        "No lo sé"
+      ]
+    },
+    {
+      "id": "q1_5_accidents_desc",
+      "type": "text",
+      "text": "Describe la exposición accidental:",
       "showIf": {
-        "question": "chronic_any",
+        "question": "q1_5_accidents",
         "equals": "Sí"
       }
     },
     {
-      "id": "meds",
+      "id": "q2_1_limitations",
+      "type": "single",
+      "text": "¿Te han declarado alguna limitación o restricción laboral previa?",
+      "options": [
+        "Sí",
+        "No",
+        "No lo sé"
+      ]
+    },
+    {
+      "id": "q2_1_limitations_desc",
+      "type": "text",
+      "text": "¿Cuál limitación?",
+      "showIf": {
+        "question": "q2_1_limitations",
+        "equals": "Sí"
+      }
+    },
+    {
+      "id": "q2_2_hospital",
+      "type": "single",
+      "text": "¿Has tenido intervenciones o ingresos en los últimos 12 meses?",
+      "options": [
+        "Sí",
+        "No"
+      ]
+    },
+    {
+      "id": "q2_2_hospital_desc",
+      "type": "text",
+      "text": "Describe el motivo:",
+      "showIf": {
+        "question": "q2_2_hospital",
+        "equals": "Sí"
+      }
+    },
+    {
+      "id": "q2_3_chronic",
+      "type": "multi",
+      "text": "¿Tienes enfermedades crónicas diagnosticadas?",
+      "options": [
+        "HTA (Hipertensión)",
+        "Diabetes",
+        "Asma / EPOC",
+        "Cardiopatía",
+        "Epilepsia",
+        "Trastorno tiroideo",
+        "Enfermedad renal",
+        "Enfermedad hepática",
+        "Salud mental (ansiedad/depresión)",
+        "Migraña",
+        "Alergias",
+        "Otra (especificar)",
+        "Ninguna"
+      ]
+    },
+    {
+      "id": "q2_4_meds",
       "type": "single",
       "text": "¿Tomas medicación habitual?",
       "options": [
         "No",
-        "Sí (especificar)",
-        "A veces",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true
+        "Sí",
+        "Prefiero comentarlo con el médico"
+      ]
     },
     {
-      "id": "allergies",
-      "type": "single",
-      "text": "¿Alergias relevantes (medicamentos/latex/alimentos)?",
-      "options": [
-        "No",
-        "Sí (especificar)",
-        "No lo sé",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true
+      "id": "q2_4_meds_list",
+      "type": "text",
+      "text": "Lista tu medicación:",
+      "showIf": {
+        "question": "q2_4_meds",
+        "equals": "Sí"
+      }
     },
     {
-      "id": "sick_leave_6m",
-      "type": "single",
-      "text": "¿Has estado de baja en los últimos 6 meses?",
-      "options": [
-        "No",
-        "Sí (motivo)",
-        "Prefiero no decir",
-        "Otro (especificar)"
-      ],
-      "other": true
-    },
-    {
-      "id": "symptoms_recent",
+      "id": "q2_5_allergies",
       "type": "multi",
-      "text": "En las últimas semanas, ¿has tenido alguno de estos síntomas?",
+      "text": "¿Alergias relevantes?",
       "options": [
-        "Ninguno",
-        "Dolor lumbar",
-        "Dolor cervical",
-        "Dolor articular",
-        "Mareos",
-        "Falta de aire",
-        "Dolor torácico",
-        "Palpitaciones",
-        "Cansancio intenso",
-        "Ansiedad/estrés",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true
-    },
-    {
-      "id": "redflag_chestpain_now",
-      "type": "single",
-      "text": "Ahora mismo, ¿tienes dolor torácico o dificultad respiratoria importante?",
-      "options": [
-        "No",
-        "Sí",
-        "No estoy seguro",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "required": true,
-      "redFlagIf": [
-        "Sí",
-        "No estoy seguro"
+        "Medicamentos",
+        "Látex",
+        "Alimentos",
+        "Picaduras",
+        "Químicos",
+        "Otra (especificar)",
+        "Ninguna"
       ]
     },
     {
-      "id": "sleepiness",
+      "id": "q3_1_symptoms_matrix_info",
+      "type": "info",
+      "text": "A continuación te preguntaremos por síntomas en las últimas 4 semanas."
+    },
+    {
+      "id": "q3_1_chest_pain",
       "type": "single",
-      "text": "¿Somnolencia que interfiera en el trabajo?",
+      "text": "Dolor torácico con esfuerzo",
       "options": [
+        "Sí",
         "No",
-        "A veces",
-        "Frecuente",
-        "Sí, me preocupa",
-        "Otro (especificar)"
-      ],
-      "other": true,
-      "redFlagIf": [
-        "Frecuente",
-        "Sí, me preocupa"
+        "NS/NC"
       ]
     },
     {
-      "id": "smoking",
+      "id": "q3_1_short_breath",
+      "type": "single",
+      "text": "Falta de aire con esfuerzo leve",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_dizzyness",
+      "type": "single",
+      "text": "Mareos / Síncopes",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_palpitations",
+      "type": "single",
+      "text": "Palpitaciones importantes",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_cough",
+      "type": "single",
+      "text": "Tos persistente",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_wheezing",
+      "type": "single",
+      "text": "Sibilancias (pitos)",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_back_pain",
+      "type": "single",
+      "text": "Dolor lumbar frecuente",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_neck_pain",
+      "type": "single",
+      "text": "Dolor cuello / hombro / brazo",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_numbness",
+      "type": "single",
+      "text": "Hormigueos / adormecimiento manos",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_force_loss",
+      "type": "single",
+      "text": "Pérdida de fuerza",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_headache",
+      "type": "single",
+      "text": "Cefaleas frecuentes",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_sleep",
+      "type": "single",
+      "text": "Alteraciones del sueño",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_1_stress",
+      "type": "single",
+      "text": "Estrés / ansiedad que afecta al trabajo",
+      "options": [
+        "Sí",
+        "No",
+        "NS/NC"
+      ]
+    },
+    {
+      "id": "q3_2_intensity",
+      "type": "single",
+      "text": "Del 0 al 10, ¿cuánto te limita el síntoma principal en el trabajo?",
+      "placeholder": "0 = Nada, 10 = Máximo",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10"
+      ]
+    },
+    {
+      "id": "q3_3_sick_leave",
+      "type": "single",
+      "text": "¿Has estado de baja laboral en el último año?",
+      "options": [
+        "No",
+        "Sí (<7 días)",
+        "Sí (1-4 semanas)",
+        "Sí (>1 mes)"
+      ]
+    },
+    {
+      "id": "q3_3_sick_leave_reason",
+      "type": "text",
+      "text": "Motivo de la baja:",
+      "showIf": {
+        "question": "q3_3_sick_leave",
+        "equals": "Sí (>1 mes)"
+      }
+    },
+    {
+      "id": "q4_1_sleep_hours",
+      "type": "single",
+      "text": "Promedio de sueño diario",
+      "options": [
+        "< 5h",
+        "5 – 6h",
+        "7 – 8h",
+        "> 8h",
+        "Variable"
+      ]
+    },
+    {
+      "id": "q4_2_activity",
+      "type": "single",
+      "text": "Actividad física",
+      "options": [
+        "Sedentario",
+        "1 – 2 días/sem",
+        "3 – 4 días/sem",
+        "5+ días/sem",
+        "Otro (especificar)"
+      ]
+    },
+    {
+      "id": "q4_3_smoking",
       "type": "single",
       "text": "Tabaco",
       "options": [
-        "No fumo",
+        "No",
         "Exfumador",
-        "Ocasional",
-        "Diario",
-        "Otro (especificar)"
-      ],
-      "other": true
-    }
-  ],
-  "closing": [
-    {
-      "id": "final_notes",
-      "type": "text",
-      "text": "¿Algo más que quieras comentar al médico? (opcional)",
-      "placeholder": "Escribe aquí…",
-      "maxChars": 200
+        "Sí (≤10/día)",
+        "Sí (>10/día)",
+        "Prefiero no responder"
+      ]
     }
   ],
   "modules": [
     {
-      "id": "screens",
+      "id": "mod_pvd",
       "trigger": {
         "exposuresIncludes": [
-          "Pantallas"
+          "Pantallas (Oficina)",
+          "Administración",
+          "Docencia"
         ]
       },
       "questions": [
         {
-          "id": "screens_vision",
+          "id": "qa_1_pvd_hours",
           "type": "single",
-          "text": "Con pantallas, ¿fatiga visual o visión borrosa?",
+          "text": "Horas al día frente a pantalla",
           "options": [
-            "No",
-            "A veces",
-            "Frecuente",
-            "Sí, me limita",
-            "Otro (especificar)"
-          ],
-          "other": true
+            "0 – 2",
+            "2 – 4",
+            "4 – 6",
+            "> 6",
+            "Variable"
+          ]
         },
         {
-          "id": "screens_posture",
-          "type": "single",
-          "text": "¿Dolor cervical/espalda asociado al puesto?",
+          "id": "qa_2_pvd_symptoms",
+          "type": "multi",
+          "text": "Síntomas visuales con pantallas",
           "options": [
-            "No",
-            "Leve",
-            "Moderado",
-            "Intenso",
+            "Ninguno",
+            "Ojos secos",
+            "Visión borrosa",
+            "Dolor de cabeza",
             "Otro (especificar)"
-          ],
-          "other": true
+          ]
+        },
+        {
+          "id": "qa_3_pvd_pain",
+          "type": "multi",
+          "text": "Dolor musculoesquelético asociado",
+          "options": [
+            "Ninguno",
+            "Cuello",
+            "Hombros",
+            "Muñecas/manos",
+            "Lumbar",
+            "Otro (especificar)"
+          ]
         }
       ]
     },
     {
-      "id": "loads",
+      "id": "mod_load",
       "trigger": {
         "exposuresIncludes": [
-          "Cargas/esfuerzo"
+          "Manipulación de cargas",
+          "Almacén",
+          "Construcción",
+          "Limpieza",
+          "Hostelería"
         ]
       },
       "questions": [
         {
-          "id": "loads_weight",
+          "id": "qb_1_load_weight",
           "type": "single",
-          "text": "Peso habitual que manipulas",
+          "text": "Peso habitual manipulado",
           "options": [
             "< 5 kg",
-            "5–10 kg",
-            "10–20 kg",
+            "5 – 10 kg",
+            "10 – 20 kg",
             "> 20 kg",
-            "Otro (especificar)"
-          ],
-          "other": true
+            "Variable"
+          ]
         },
         {
-          "id": "loads_pain",
+          "id": "qb_2_load_freq",
           "type": "single",
-          "text": "¿Dolor lumbar al final de la jornada?",
+          "text": "Frecuencia de manipulación",
+          "options": [
+            "Ocasional",
+            "Varias veces al día",
+            "Continuo",
+            "Otro (especificar)"
+          ]
+        },
+        {
+          "id": "qb_3_load_pain",
+          "type": "single",
+          "text": "¿Episodios de lumbalgia o ciática?",
           "options": [
             "No",
-            "A veces",
-            "Frecuente",
-            "Sí, intenso",
-            "Otro (especificar)"
-          ],
-          "other": true
+            "No lo sé",
+            "Sí (especificar)"
+          ]
+        },
+        {
+          "id": "qb_3_load_pain_desc",
+          "type": "text",
+          "text": "¿Cuándo ocurrió?",
+          "showIf": {
+            "question": "qb_3_load_pain",
+            "equals": "Sí (especificar)"
+          }
         }
       ]
     },
     {
-      "id": "noise",
+      "id": "mod_noise",
       "trigger": {
         "exposuresIncludes": [
-          "Ruido"
+          "Ruido elevado",
+          "Industria",
+          "Construcción",
+          "Uso de maquinaria"
         ]
       },
       "questions": [
         {
-          "id": "noise_ppe",
+          "id": "qc_1_noise_prot",
           "type": "single",
-          "text": "¿Usas protección auditiva cuando corresponde?",
+          "text": "¿Usas protección auditiva?",
           "options": [
             "Siempre",
             "A veces",
             "Nunca",
             "No aplica",
             "Otro (especificar)"
-          ],
-          "other": true
+          ]
         },
         {
-          "id": "noise_tinnitus",
-          "type": "single",
-          "text": "¿Zumbidos (acúfenos) o pérdida auditiva percibida?",
+          "id": "qc_2_noise_symp",
+          "type": "multi",
+          "text": "Síntomas auditivos",
           "options": [
-            "No",
-            "A veces",
-            "Frecuente",
-            "Sí, importante",
+            "Ninguno",
+            "Zumbidos (tinnitus)",
+            "Dificultad para oír",
+            "Molestia intensa al ruido",
             "Otro (especificar)"
-          ],
-          "other": true
+          ]
         }
       ]
     },
     {
-      "id": "chemicals_dust",
+      "id": "mod_chem",
       "trigger": {
         "exposuresIncludes": [
-          "Químicos",
-          "Polvo/humos"
+          "Productos químicos",
+          "Limpieza",
+          "Industria",
+          "Pinturas",
+          "Gases"
         ]
       },
       "questions": [
         {
-          "id": "resp_work_related",
-          "type": "single",
-          "text": "¿Tos o dificultad respiratoria relacionada con el trabajo?",
+          "id": "qd_1_chem_type",
+          "type": "multi",
+          "text": "Tipo de exposición",
           "options": [
-            "No",
-            "A veces",
-            "Frecuente",
-            "Sí, importante",
+            "Disolventes",
+            "Pinturas",
+            "Limpieza (cloro/amoníaco)",
+            "Polvos",
+            "Humos",
+            "Gases",
             "Otro (especificar)"
-          ],
-          "other": true,
-          "redFlagIf": [
-            "Sí, importante"
           ]
         },
         {
-          "id": "ppe_use",
-          "type": "single",
-          "text": "¿Usas EPI según protocolo (mascarilla/guantes)?",
+          "id": "qd_2_chem_symp",
+          "type": "multi",
+          "text": "Síntomas relacionados",
           "options": [
-            "Siempre",
-            "A veces",
+            "Ninguno",
+            "Irritación ocular",
+            "Dermatitis",
+            "Tos",
+            "Ahogo",
+            "Cefalea",
+            "Náuseas",
+            "Otro (especificar)"
+          ]
+        },
+        {
+          "id": "qd_3_chem_epi",
+          "type": "multi",
+          "text": "EPI utilizado",
+          "options": [
+            "Guantes",
+            "Mascarilla",
+            "Gafas",
+            "Ropa protección",
+            "No uso",
+            "Otro (especificar)"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mod_bio",
+      "trigger": {
+        "exposuresIncludes": [
+          "Agentes biológicos",
+          "Sanitario",
+          "Limpieza"
+        ]
+      },
+      "questions": [
+        {
+          "id": "qe_1_bio_blood",
+          "type": "single",
+          "text": "Contacto con sangre/fluidos",
+          "options": [
+            "Frecuente",
+            "Ocasional",
+            "Raro",
+            "No"
+          ]
+        },
+        {
+          "id": "qe_2_bio_incidents",
+          "type": "single",
+          "text": "¿Pinchazo/salpicadura en el último año?",
+          "options": [
+            "Sí",
+            "No"
+          ]
+        },
+        {
+          "id": "qe_2_bio_incidents_desc",
+          "type": "text",
+          "text": "Detalles del incidente:",
+          "showIf": {
+            "question": "qe_2_bio_incidents",
+            "equals": "Sí"
+          }
+        },
+        {
+          "id": "qe_3_bio_vac_hep",
+          "type": "single",
+          "text": "Vacunación Hepatitis B",
+          "options": [
+            "Completa",
+            "Incompleta",
+            "No",
+            "No lo sé"
+          ]
+        },
+        {
+          "id": "qe_3_bio_vac_tet",
+          "type": "single",
+          "text": "Vacunación Tétanos",
+          "options": [
+            "Al día",
+            "No",
+            "No lo sé"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "mod_drive",
+      "trigger": {
+        "exposuresIncludes": [
+          "Conducción",
+          "Uso de maquinaria",
+          "Conductor"
+        ]
+      },
+      "questions": [
+        {
+          "id": "qf_1_drive_main",
+          "type": "single",
+          "text": "¿Conduces o manejas maquinaria como tarea principal?",
+          "options": [
+            "Sí",
+            "No"
+          ]
+        },
+        {
+          "id": "qf_2_drive_sleep",
+          "type": "single",
+          "text": "Somnolencia diurna",
+          "options": [
             "Nunca",
-            "No aplica",
-            "Otro (especificar)"
-          ],
-          "other": true
-        }
-      ]
-    },
-    {
-      "id": "driving_machinery",
-      "trigger": {
-        "exposuresIncludes": [
-          "Conducción/maquinaria"
-        ]
-      },
-      "questions": [
-        {
-          "id": "driving_incidents",
-          "type": "single",
-          "text": "¿Has tenido sustos/incidentes por cansancio o mareo?",
-          "options": [
-            "No",
-            "Alguna vez",
-            "Sí (últimos 6 meses)",
-            "Otro (especificar)"
-          ],
-          "other": true,
-          "redFlagIf": [
-            "Sí (últimos 6 meses)"
-          ]
-        }
-      ]
-    },
-    {
-      "id": "heights",
-      "trigger": {
-        "exposuresIncludes": [
-          "Alturas"
-        ]
-      },
-      "questions": [
-        {
-          "id": "vertigo",
-          "type": "single",
-          "text": "¿Vértigo o mareos trabajando en altura?",
-          "options": [
-            "No",
             "A veces",
             "Frecuente",
-            "Sí, importante",
             "Otro (especificar)"
-          ],
-          "other": true,
-          "redFlagIf": [
-            "Frecuente",
-            "Sí, importante"
           ]
+        },
+        {
+          "id": "qf_3_drive_seizure",
+          "type": "single",
+          "text": "¿Episodios de pérdida de conciencia o convulsiones?",
+          "options": [
+            "Sí (especificar)",
+            "No"
+          ]
+        },
+        {
+          "id": "qf_3_drive_seizure_desc",
+          "type": "text",
+          "text": "Detalles:",
+          "showIf": {
+            "question": "qf_3_drive_seizure",
+            "equals": "Sí (especificar)"
+          }
         }
       ]
     },
     {
-      "id": "bio_risk",
+      "id": "mod_height",
       "trigger": {
         "exposuresIncludes": [
-          "Riesgo biológico"
+          "Trabajo en altura",
+          "Construcción"
         ]
       },
       "questions": [
         {
-          "id": "bio_incident",
+          "id": "qg_1_height_vertigo",
           "type": "single",
-          "text": "¿Has tenido pinchazo/exposición accidental reciente?",
+          "text": "Vértigo o miedo incapacitante a alturas",
           "options": [
+            "Sí",
             "No",
-            "Sí (reciente)",
-            "No aplica",
-            "Otro (especificar)"
-          ],
-          "other": true,
-          "redFlagIf": [
-            "Sí (reciente)"
+            "A veces"
           ]
+        },
+        {
+          "id": "qg_2_height_balance",
+          "type": "single",
+          "text": "¿Problemas de equilibrio?",
+          "options": [
+            "Sí (especificar)",
+            "No"
+          ]
+        },
+        {
+          "id": "qg_2_height_balance_desc",
+          "type": "text",
+          "text": "Detalles:",
+          "showIf": {
+            "question": "qg_2_height_balance",
+            "equals": "Sí (especificar)"
+          }
         }
       ]
     }
   ],
-  "scoring": {
-    "redFlagScoreMap": {
-      "redflag_chestpain_now:Sí": 5,
-      "redflag_chestpain_now:No estoy seguro": 4,
-      "sleepiness:Frecuente": 3,
-      "sleepiness:Sí, me preocupa": 4
+  "closing": [
+    {
+      "id": "q6_1_safety_check",
+      "type": "text",
+      "text": "¿Hay algo de tu salud que pueda afectar a tu seguridad o la de terceros en este puesto?",
+      "placeholder": "Por ejemplo: mareos, crisis, limitaciones físicas, medicación que produzca somnolencia…"
     },
-    "priorityLevels": [
-      {
-        "minScore": 5,
-        "label": "ALTA"
-      },
-      {
-        "minScore": 3,
-        "label": "MEDIA"
-      },
-      {
-        "minScore": 0,
-        "label": "NORMAL"
-      }
-    ]
-  }
+    {
+      "id": "q6_2_final_comments",
+      "type": "text",
+      "text": "Comentarios adicionales u otros temas (opcional)",
+      "placeholder": "Cualquier otra cosa que quieras mencionar..."
+    }
+  ]
 }

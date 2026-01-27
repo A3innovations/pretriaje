@@ -60,7 +60,7 @@ export type Report = {
 
 // --- Questionnaire Engine Types ---
 
-export type QuestionType = 'single' | 'multi' | 'text' | 'number';
+export type QuestionType = 'single' | 'multi' | 'text' | 'number' | 'info';
 
 export type QuestionOption = string; // Simple string options for now
 

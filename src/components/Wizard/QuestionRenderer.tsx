@@ -75,6 +75,19 @@ export default function QuestionRenderer({ question, value, onChange, onNext }: 
         return value === opt;
     };
 
+    if (question.type === "info") {
+        return (
+            <div className="anim-enter text-center">
+                <div className="bg-indigo-50 text-indigo-800 p-6 rounded-2xl border border-indigo-100 mb-6">
+                    <p className="text-lg font-medium leading-relaxed whitespace-pre-line">{question.text}</p>
+                </div>
+                {/* Parent handles the 'Next' button typically, but if we need a specific acknowledgment checkbox inside an info block, we might do it here. 
+                    For pure info, just rendering text is enough. The 'Next' button in WizardPage will be 'Continuar'.
+                */}
+            </div>
+        );
+    }
+
     if (question.type === "text") {
         return (
             <div className="anim-enter">
