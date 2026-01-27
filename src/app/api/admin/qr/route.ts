@@ -2,18 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 
 export async function POST(request: NextRequest) {
-    // In a real app, verify admin auth here
     try {
         const { campaignId } = await request.json();
-        const newToken = db.rotateCampaignToken(campaignId);
 
-        if (!newToken) {
-            return NextResponse.json({ error: "Campaign not found" }, { status: 404 });
-        }
+        // Stateless Token Generation (for Vercel compatibility)
+        // Format: simple base64 of json { c: campaignId, e: timestamp }
+        // 12 hours validity from rotation
+        const payload = {
+            c: campaignId,
+            e: Date.now() + 12 * 60 * 60 * 1000,
+            s: Math.random().toString(36).substring(7) // salt
+        };
+
+        const newToken = Buffer.from(JSON.stringify(payload)).toString('base64');
+
+        // We still update DB for local consistency in the same lambda
+        db.rotateCampaignToken(campaignId);
 
         return NextResponse.json({
             token: newToken,
-            expiresAt: db.getCampaign(campaignId)?.qr_token_expires_at,
+            expiresAt: new Date(payload.e).toISOString(),
             urlParams: `?campaign_id=${campaignId}&token=${newToken}`
         });
     } catch (e) {
