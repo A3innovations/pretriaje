@@ -1,0 +1,273 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { CheckCircle, Download, Home, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { jsPDF } from "jspdf";
+import questionsData from "@/lib/questions.json";
+import { Session } from "@/lib/types";
+
+export default function ConfirmationPage() {
+    const router = useRouter();
+    const [session, setSession] = useState<Session | null>(null);
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const sid = sessionStorage.getItem("session_id");
+        if (sid) {
+            fetch(`/api/session/${sid}`)
+                .then(res => res.json())
+                .then(data => {
+                    setSession(data);
+                    setLoading(false);
+                })
+                .catch(() => setLoading(false));
+        } else {
+            setLoading(false);
+        }
+    }, []);
+
+    const handleDownload = () => {
+        if (!session) return;
+
+        const doc = new jsPDF();
+        let yPos = 20;
+        const pageHeight = doc.internal.pageSize.height;
+        const margin = 20;
+
+        // Helpers
+        const checkPageBreak = (spaceNeeded: number) => {
+            if (yPos + spaceNeeded > pageHeight - margin) {
+                doc.addPage();
+                yPos = 20;
+            }
+        };
+
+        const addTitle = (text: string) => {
+            checkPageBreak(15);
+            doc.setFontSize(14);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(30, 41, 59); // Slate 800
+            doc.text(text, margin, yPos);
+            yPos += 10;
+        };
+
+        const addPair = (label: string, value: string) => {
+            checkPageBreak(14);
+            doc.setFontSize(9);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(100, 116, 139); // Slate 500
+            doc.text(label.toUpperCase(), margin, yPos);
+            yPos += 5;
+
+            doc.setFontSize(11);
+            doc.setFont("helvetica", "normal");
+            doc.setTextColor(15, 23, 42); // Slate 900
+            // Handle multi-line text
+            const splitText = doc.splitTextToSize(value, 170);
+            doc.text(splitText, margin, yPos);
+            yPos += (splitText.length * 5) + 6;
+        };
+
+        console.log("Generating Premium PDF...");
+
+        // --- HEADER ---
+        // Header Background
+        doc.setFillColor(79, 70, 229); // Indigo 600
+        doc.rect(0, 0, 210, 40, "F");
+
+        doc.setFontSize(22);
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(255, 255, 255); // White
+        doc.text("INFORME PRE-TRIAJE", margin, 20);
+
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(224, 231, 255); // Indigo 100
+        doc.text("DOCUMENTO CLÍNICO CONFIDENCIAL", margin, 28);
+
+        // Right side header info
+        doc.setFontSize(10);
+        doc.setTextColor(255, 255, 255);
+        doc.text(`ID PACIENTE: ${session.worker_id || "PENDIENTE"}`, 140, 18);
+        doc.text(`FECHA: ${new Date().toLocaleDateString()}`, 140, 26);
+
+        yPos = 55;
+
+        // --- SECTION: SUMMARY (Compact) ---
+        // User requested NO red box and Single Page fit.
+        // We will just list red flags inline or very compactly if they exist, without big boxes.
+
+        // Just move down a bit, no text, no color.
+        yPos += 5;
+
+        // Helper for sections to keep it tight
+        const renderSectionHeader = (title: string, color: [number, number, number] = [79, 70, 229]) => {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(...color);
+            doc.text(title, margin, yPos);
+            doc.setDrawColor(226, 232, 240);
+            doc.line(margin, yPos + 2, 210 - margin, yPos + 2);
+            yPos += 8;
+        };
+
+        // --- SECTION: CORE ---
+        renderSectionHeader("DATOS GENERALES");
+
+        // Compact Core Data (2 columns logic)
+        questionsData.core.forEach((q: any) => {
+            if (session.answers[q.id]) {
+                const val = Array.isArray(session.answers[q.id])
+                    ? session.answers[q.id].join(", ")
+                    : String(session.answers[q.id]);
+
+                // Safe Label Printing (multiline if needed, but keeping it simple for now with smaller font or max width)
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(8);
+                doc.setTextColor(100, 116, 139);
+
+                // Split label if too long for the left column (width ~100)
+                const labelLines = doc.splitTextToSize(q.text.toUpperCase(), 95);
+                doc.text(labelLines, margin, yPos);
+
+                // Value Column (Right side, starting at margin + 100)
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9);
+                doc.setTextColor(15, 23, 42);
+
+                // Calculate height based on Label lines
+                const labelHeight = labelLines.length * 4;
+
+                // Check if value needs split too
+                const valLines = doc.splitTextToSize(val, 80);
+                doc.text(valLines, margin + 105, yPos);
+
+                // Move yPos by the taller of the two
+                const valHeight = valLines.length * 4;
+                yPos += Math.max(labelHeight, valHeight) + 3; // +3 padding
+            }
+        });
+
+        yPos += 5;
+
+        // --- SECTIONS: MODULES ---
+        questionsData.modules.forEach((mod: any) => {
+            const hasAnswers = mod.questions.some((q: any) => session.answers[q.id]);
+            if (!hasAnswers) return;
+
+            // Page Break Logic: If close to bottom, new page, but try to avoid it.
+            if (yPos > 270) {
+                doc.addPage();
+                yPos = 20;
+            }
+
+            const modTitleMap: Record<string, string> = {
+                'screens': 'PANTALLAS',
+                'loads': 'CARGAS',
+                'noise': 'RUIDO',
+                'chemicals_dust': 'QUÍMICOS',
+                'biological': 'BIOLÓGICOS',
+                'psychosocial': 'PSICOSOCIAL',
+                'driving': 'CONDUCCIÓN'
+            };
+            const cleanTitle = (modTitleMap[mod.id] || mod.id).toUpperCase().replace(/_/g, " ");
+
+            renderSectionHeader(cleanTitle);
+
+            mod.questions.forEach((q: any) => {
+                if (session.answers[q.id]) {
+                    const val = Array.isArray(session.answers[q.id])
+                        ? session.answers[q.id].join(", ")
+                        : String(session.answers[q.id]);
+
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(100, 116, 139);
+
+                    const labelLines = doc.splitTextToSize(q.text, 95);
+                    doc.text(labelLines, margin, yPos);
+
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(9);
+                    doc.setTextColor(15, 23, 42);
+
+                    const valLines = doc.splitTextToSize(val, 80);
+                    doc.text(valLines, margin + 105, yPos);
+
+                    const height = Math.max(labelLines.length * 4, valLines.length * 4);
+                    yPos += height + 3;
+                }
+            });
+            yPos += 3;
+        });
+
+        // Footer
+        const totalPages = doc.getNumberOfPages();
+        for (let i = 1; i <= totalPages; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.text(`Página ${i} de ${totalPages} - Generado por Pre-Triaje 1.0`, 105, 290, { align: "center" });
+        }
+
+        doc.save(`Informe_${session.worker_id || "Pretriaje"}.pdf`);
+    };
+
+    if (loading) return (
+        <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400">
+            <Loader2 className="animate-spin mr-2" /> Generando confirmación...
+        </div>
+    );
+
+    return (
+        <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-6">
+
+            <div className="bg-white w-full max-w-[480px] rounded-2xl shadow-xl p-10 text-center anim-enter">
+
+                <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm">
+                    <CheckCircle size={40} className="text-green-600" strokeWidth={2.5} />
+                </div>
+
+                <h1 className="text-2xl font-bold text-slate-900 mb-3 tracking-tight">
+                    ¡Informe Enviado!
+                </h1>
+
+                <p className="text-slate-500 mb-8 leading-relaxed">
+                    Tus respuestas han sido procesadas correctamente. El equipo médico ya tiene acceso a tu pre-triaje.
+                </p>
+
+                {/* Actions Card */}
+                <div className="bg-indigo-50 border border-indigo-100 rounded-xl p-6 mb-8">
+                    <h3 className="font-bold text-indigo-900 mb-1">Tu copia personal</h3>
+                    <p className="text-xs text-indigo-600/80 mb-4">
+                        Descarga el informe completo en PDF.
+                    </p>
+                    <button
+                        onClick={handleDownload}
+                        disabled={!session}
+                        className="w-full btn h-12 bg-white text-indigo-600 hover:bg-indigo-50 border border-indigo-200 shadow-sm font-bold flex items-center justify-center rounded-lg transition-all"
+                    >
+                        {session ? (
+                            <>
+                                <Download className="w-5 h-5 mr-2" />
+                                Descargar PDF Oficial
+                            </>
+                        ) : (
+                            "Cargando datos..."
+                        )}
+                    </button>
+                    {!session && <p className="text-[10px] text-red-400 mt-2">Error: No se pudo cargar la sesión para el PDF.</p>}
+                </div>
+
+                <button
+                    onClick={() => router.push("/start")}
+                    className="text-slate-400 hover:text-slate-600 font-medium text-sm flex items-center justify-center transition-colors"
+                >
+                    <Home className="w-4 h-4 mr-2" />
+                    Volver al inicio
+                </button>
+            </div>
+        </div>
+    );
+}
