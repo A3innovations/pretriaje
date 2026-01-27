@@ -152,55 +152,126 @@ export default function ConfirmationPage() {
         yPos += 5;
 
         // --- SECTIONS: MODULES ---
+        // Helper to draw a row with robust height calculation
+        const printRow = (label: string, value: string, isLast = false) => {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9); // Larger, clearer label
+            doc.setTextColor(100, 116, 139); // Slate 500
+
+            // Column Widths
+            const col1X = margin;
+            const col1W = 90;
+            const col2X = margin + 95;
+            const col2W = 80;
+
+            const labelLines = doc.splitTextToSize(label, col1W);
+            const labelHeight = labelLines.length * 4.5; // Slightly more leading
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10); // Standard readable size
+            doc.setTextColor(15, 23, 42); // Slate 900
+
+            const valLines = doc.splitTextToSize(value, col2W);
+            const valHeight = valLines.length * 5;
+
+            const rowHeight = Math.max(labelHeight, valHeight) + 6; // Padding
+
+            // Page Break Check
+            if (yPos + rowHeight > pageHeight - margin) {
+                doc.addPage();
+                yPos = margin + 10; // Reset top
+            }
+
+            // Draw
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text(labelLines, col1X, yPos + 3);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.setTextColor(15, 23, 42);
+            doc.text(valLines, col2X, yPos + 3);
+
+            // Divider Line
+            if (!isLast) {
+                doc.setDrawColor(241, 245, 249); // Very light slate
+                doc.line(col1X, yPos + rowHeight - 2, 210 - margin, yPos + rowHeight - 2);
+            }
+
+            yPos += rowHeight;
+        };
+
+        // --- SECTIONS: MODULES ---
+        // Combine Core + Modules into a single predictable flow since User asked for "well structured"
+
+        // 1. Datos Generales
+        questionsData.core.forEach((q: any) => {
+            if (session.answers[q.id] && q.type !== 'info') {
+                // Use Question text as is
+                let label = q.text;
+                const val = Array.isArray(session.answers[q.id])
+                    ? session.answers[q.id].join(", ")
+                    : String(session.answers[q.id]);
+
+                printRow(label, val);
+            }
+        });
+
+        yPos += 8;
+
+        // 2. Modules
         questionsData.modules.forEach((mod: any) => {
             const hasAnswers = mod.questions.some((q: any) => session.answers[q.id]);
             if (!hasAnswers) return;
 
-            // Page Break Logic: If close to bottom, new page, but try to avoid it.
-            if (yPos > 270) {
+            // Header for Module
+            if (yPos + 15 > pageHeight - margin) {
                 doc.addPage();
-                yPos = 20;
+                yPos = margin + 10;
             }
 
             const modTitleMap: Record<string, string> = {
-                'screens': 'PANTALLAS',
-                'loads': 'CARGAS',
-                'noise': 'RUIDO',
-                'chemicals_dust': 'QUÍMICOS',
-                'biological': 'BIOLÓGICOS',
-                'psychosocial': 'PSICOSOCIAL',
-                'driving': 'CONDUCCIÓN'
+                'mod_pvd': 'PANTALLAS Y VISIÓN',
+                'mod_load': 'CARGAS Y ESFUERZO',
+                'mod_noise': 'RUIDO',
+                'mod_chem': 'QUÍMICOS Y RESPIRATORIO',
+                'mod_bio': 'RIESGO BIOLÓGICO',
+                'mod_drive': 'CONDUCCIÓN',
+                'mod_height': 'TRABAJO EN ALTURA'
             };
-            const cleanTitle = (modTitleMap[mod.id] || mod.id).toUpperCase().replace(/_/g, " ");
+            const cleanTitle = (modTitleMap[mod.id] || mod.id).toUpperCase();
 
-            renderSectionHeader(cleanTitle);
+            // Module Header Styling
+            doc.setFillColor(248, 250, 252); // Slate 50
+            doc.rect(margin, yPos - 1, 210 - (margin * 2), 8, "F");
 
-            mod.questions.forEach((q: any) => {
-                if (session.answers[q.id]) {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(10);
+            doc.setTextColor(71, 85, 105); // Slate 600
+            doc.text(cleanTitle, margin + 2, yPos + 5);
+            yPos += 12;
+
+            mod.questions.forEach((q: any, idx: number) => {
+                if (session.answers[q.id] && q.type !== 'info') {
                     const val = Array.isArray(session.answers[q.id])
                         ? session.answers[q.id].join(", ")
                         : String(session.answers[q.id]);
 
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(8);
-                    doc.setTextColor(100, 116, 139);
-
-                    const labelLines = doc.splitTextToSize(q.text, 95);
-                    doc.text(labelLines, margin, yPos);
-
-                    doc.setFont("helvetica", "normal");
-                    doc.setFontSize(9);
-                    doc.setTextColor(15, 23, 42);
-
-                    const valLines = doc.splitTextToSize(val, 80);
-                    doc.text(valLines, margin + 105, yPos);
-
-                    const height = Math.max(labelLines.length * 4, valLines.length * 4);
-                    yPos += height + 3;
+                    printRow(q.text, val, idx === mod.questions.length - 1);
                 }
             });
-            yPos += 3;
+            yPos += 8;
         });
+
+        // 3. Closing
+        if (questionsData.closing) {
+            questionsData.closing.forEach((q: any) => {
+                if (session.answers[q.id]) {
+                    printRow(q.text, String(session.answers[q.id]));
+                }
+            });
+        }
 
         // Footer
         const totalPages = doc.getNumberOfPages();

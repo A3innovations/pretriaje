@@ -116,6 +116,26 @@ export default function ReportPage() {
                     </div>
                 </header>
 
+                {/* REVIEWED Banner */}
+                {(isReviewed || session.reviewed) && (
+                    <div className="mb-8 bg-emerald-600 rounded-xl p-6 shadow-lg flex items-center justify-between text-white animate-in zoom-in-95 duration-300 print:bg-white print:text-black print:border-2 print:border-emerald-600">
+                        <div className="flex items-center gap-4">
+                            <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center backdrop-blur-sm">
+                                <Check size={28} strokeWidth={3} />
+                            </div>
+                            <div>
+                                <h3 className="text-xl font-bold tracking-tight">Informe Revisado</h3>
+                                <p className="text-emerald-100 font-medium print:text-slate-500">
+                                    Validado por equipo médico el {session.reviewed_at ? new Date(session.reviewed_at).toLocaleDateString() : 'fecha pendiente'}.
+                                </p>
+                            </div>
+                        </div>
+                        <div className="hidden md:block opacity-80 font-mono text-sm tracking-widest border border-white/30 px-3 py-1 rounded">
+                            STATUS: OK
+                        </div>
+                    </div>
+                )}
+
                 {/* Summary Section (Alerts) */}
                 {(session as any).red_flag_score > 0 ? (
                     <div className="mb-8 bg-red-50 border border-red-100 rounded-xl p-6 shadow-sm print:border-2 print:border-red-500 print:bg-white">
@@ -140,7 +160,7 @@ export default function ReportPage() {
 
                     </div>
                 ) : (
-                    <div className="mb-8 bg-green-50 border border-green-100 rounded-xl p-4 flex items-center gap-3 text-green-800 shadow-sm print:hidden">
+                    <div className="mb-8 bg-slate-50 border border-slate-200 rounded-xl p-4 flex items-center gap-3 text-slate-600 shadow-sm print:hidden">
                         <CheckCircle size={20} />
                         <span className="font-medium">Sin alertas clínicas detectadas. Valores dentro de la normalidad.</span>
                     </div>
