@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { QrCode, RefreshCw, Copy, ExternalLink, Check, Clock, ShieldCheck, AlertCircle } from "lucide-react";
+import { QrCode, RefreshCw, Copy, ExternalLink, Check, Clock, ShieldCheck, AlertCircle, Zap } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 
 export default function AdminQRPage() {
@@ -11,23 +11,27 @@ export default function AdminQRPage() {
     const [expiresIn, setExpiresIn] = useState<string>("--:--:--");
     const [copied, setCopied] = useState(false);
     const [isExpired, setIsExpired] = useState(false);
+    const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
     const fetchToken = async () => {
-        setLoading(true);
+        // setLoading(true); // Don't block UI on refresh
         try {
             const res = await fetch(`/api/admin/qr?campaignId=${campaignId}`);
             const data = await res.json();
             if (data.token) {
                 setQrData({ token: data.token, expiresAt: data.expiresAt, url: data.url || "" });
+                setLoading(false);
             }
-        } finally {
+        } catch (e) {
+            console.error(e);
             setLoading(false);
         }
     };
 
-    const rotateToken = async () => {
-        if (!confirm("¿Generar nuevo QR? El anterior dejará de funcionar inmediatamente.")) return;
-        setLoading(true);
+    const rotateToken = async (silent = false) => {
+        if (!silent && !confirm("¿Generar nuevo QR? El anterior dejará de funcionar inmediatamente.")) return;
+
+        if (!silent) setLoading(true); // Only show loader on manual action
         try {
             const res = await fetch(`/api/admin/qr`, {
                 method: "POST",
@@ -37,9 +41,10 @@ export default function AdminQRPage() {
             const data = await res.json();
             if (data.token) {
                 setQrData({ token: data.token, expiresAt: data.expiresAt, url: data.url || "" });
+                setLastUpdated(new Date());
             }
         } finally {
-            setLoading(false);
+            if (!silent) setLoading(false);
         }
     };
 
@@ -47,36 +52,33 @@ export default function AdminQRPage() {
         fetchToken();
     }, []);
 
-    // Countdown Logic
+    // Auto-Rotate every 60 seconds
     useEffect(() => {
-        const calculateExpires = () => {
-            if (qrData?.expiresAt) {
-                const now = new Date();
-                const expiry = new Date(qrData.expiresAt);
-                const diff = expiry.getTime() - now.getTime();
+        const interval = setInterval(() => {
+            rotateToken(true);
+        }, 60000); // 60 seconds
+        return () => clearInterval(interval);
+    }, []);
 
-                if (diff <= 0) {
-                    setExpiresIn("00:00:00");
-                    setIsExpired(true);
-                } else {
-                    setIsExpired(false);
-                    const hours = Math.floor(diff / 3600000);
-                    const minutes = Math.floor((diff % 3600000) / 60000);
-                    const seconds = Math.floor((diff % 60000) / 1000);
+    // Countdown Logic (Visual only for the 60s reset)
+    const [progress, setProgress] = useState(100);
+    useEffect(() => {
+        const updateTimer = () => {
+            const now = new Date();
+            const diff = now.getTime() - lastUpdated.getTime();
+            const remaining = Math.max(0, 60000 - diff);
 
-                    const h = hours.toString().padStart(2, '0');
-                    const m = minutes.toString().padStart(2, '0');
-                    const s = seconds.toString().padStart(2, '0');
+            // Progress bar
+            setProgress((remaining / 60000) * 100);
 
-                    setExpiresIn(`${h}:${m}:${s}`);
-                }
-            }
+            // Timer string
+            const seconds = Math.floor(remaining / 1000);
+            setExpiresIn(`00:00:${seconds.toString().padStart(2, '0')}`);
         };
 
-        calculateExpires();
-        const timer = setInterval(calculateExpires, 1000);
+        const timer = setInterval(updateTimer, 100);
         return () => clearInterval(timer);
-    }, [qrData]);
+    }, [lastUpdated]);
 
     const [baseUrl, setBaseUrl] = useState("");
     useEffect(() => {
@@ -95,7 +97,7 @@ export default function AdminQRPage() {
         <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-400 font-sans">
             <div className="flex flex-col items-center gap-4">
                 <RefreshCw className="animate-spin text-indigo-500" size={32} />
-                <span className="font-medium">Iniciando sistema seguro...</span>
+                <span className="font-medium">Iniciando sistema Priora...</span>
             </div>
         </div>
     );
@@ -112,10 +114,15 @@ export default function AdminQRPage() {
 
                     {/* Header Badge */}
                     <div className="absolute top-8 left-8 lg:top-12 lg:left-12 flex items-center gap-4 animate-fade-in-down">
-                        <div className={`flex items-center gap-2 px-4 py-1.5 rounded-full border ${isExpired ? 'bg-red-50 border-red-200 text-red-600' : 'bg-emerald-50 border-emerald-200 text-emerald-700'}`}>
-                            <div className={`w-2.5 h-2.5 rounded-full ${isExpired ? 'bg-red-500' : 'bg-emerald-500 animate-pulse'}`}></div>
-                            <span className="text-sm font-bold tracking-wide uppercase">{isExpired ? 'SESIÓN EXPIRADA' : 'SISTEMA ACTIVO'}</span>
+                        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full border bg-emerald-50 border-emerald-200 text-emerald-700">
+                            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></div>
+                            <span className="text-sm font-bold tracking-wide uppercase">SISTEMA ACTIVO</span>
                         </div>
+                    </div>
+
+                    {/* Branding Top Right */}
+                    <div className="absolute top-8 right-8 lg:top-12 lg:right-12 opacity-50 grayscale hover:grayscale-0 transition-all opacity-100">
+                        <span className="font-black text-xl tracking-tighter text-indigo-900">PRIORA</span>
                     </div>
 
                     <div className="mb-10 text-center animate-fade-in-up">
@@ -126,7 +133,7 @@ export default function AdminQRPage() {
                     <div className="relative group perspective-1000 animate-zoom-in">
                         <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-1000"></div>
                         <div className="relative p-8 bg-white rounded-[2rem] shadow-[0_20px_50px_-12px_rgba(0,0,0,0.1)] border border-slate-100 transform transition-all duration-500 group-hover:scale-[1.02] group-hover:-translate-y-1">
-                            {qrData.token && !loading ? (
+                            {qrData.token ? (
                                 <QRCodeSVG
                                     value={fullUrl}
                                     size={500}
@@ -154,9 +161,9 @@ export default function AdminQRPage() {
                             <span className="text-lg font-bold text-slate-700">TechSolutions S.L.</span>
                         </div>
                         <div className="bg-white/60 backdrop-blur-sm border border-slate-200 rounded-2xl px-6 py-4 flex flex-col items-center">
-                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Token Sesión</span>
-                            <span className="text-lg font-mono font-bold text-slate-700 tracking-wider">
-                                {qrData.token.substring(0, 4)}-{qrData.token.substring(4, 8)}
+                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Rotación</span>
+                            <span className="text-lg font-bold text-slate-700 flex items-center gap-2">
+                                <Zap size={16} className="text-amber-500 fill-amber-500" /> 60s
                             </span>
                         </div>
                     </div>
@@ -166,13 +173,16 @@ export default function AdminQRPage() {
                 <div className="flex-1 min-w-[320px] max-w-md bg-white p-8 lg:p-12 flex flex-col justify-between shadow-2xl z-10 relative">
 
                     <div className="pt-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-4">Tiempo Restante</h3>
-                        <div className="text-center bg-slate-50 rounded-3xl p-8 border border-slate-100 mb-8">
-                            <div className={`text-5xl font-mono font-bold tracking-tighttabular-nums mb-2 ${isExpired ? 'text-red-500' : 'text-slate-900'}`}>
+                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-4">Seguridad Dinámica</h3>
+                        <div className="text-center bg-slate-50 rounded-3xl p-8 border border-slate-100 mb-8 relative overflow-hidden">
+                            {/* Progress Bar Background */}
+                            <div className="absolute bottom-0 left-0 h-1 bg-indigo-500 transition-all duration-100 ease-linear" style={{ width: `${progress}%` }}></div>
+
+                            <div className="text-5xl font-mono font-bold tracking-tight tabular-nums mb-2 text-slate-900">
                                 {expiresIn}
                             </div>
-                            <span className={`text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full ${isExpired ? 'bg-red-100 text-red-600' : 'bg-indigo-100 text-indigo-600'}`}>
-                                {isExpired ? 'Expirado' : 'Tiempo de validez'}
+                            <span className="text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-indigo-100 text-indigo-600">
+                                Próxima actualización
                             </span>
                         </div>
                     </div>
@@ -205,22 +215,21 @@ export default function AdminQRPage() {
 
                         <div className="bg-amber-50 rounded-2xl p-4 border border-amber-100">
                             <button
-                                onClick={rotateToken}
+                                onClick={() => rotateToken(false)}
                                 className="w-full h-14 text-sm font-bold bg-white text-amber-700 border border-amber-200 hover:bg-amber-50 hover:text-red-600 hover:border-red-200 rounded-xl transition-all flex items-center justify-center gap-2 active:scale-95"
                             >
                                 <RefreshCw size={18} />
-                                Rotar Token de Seguridad
+                                Forzar Rotación Manual
                             </button>
-                            <p className="text-[10px] text-amber-600 mt-3 text-center leading-relaxed px-2">
-                                <AlertCircle size={10} className="inline mr-1" />
-                                <b>Atención:</b> Esta acción invalidará inmediatamente todos los códigos QR anteriores.
-                            </p>
                         </div>
                     </div>
 
                     <div className="mt-8 pt-6 border-t border-slate-100 text-center">
-                        <p className="text-xs text-slate-300 font-mono">
-                            System ID: {qrData.token ? qrData.token.substring(0, 12) : '---'}
+                        <p className="text-xs text-slate-400 font-medium">
+                            Software developed by
+                        </p>
+                        <p className="text-sm font-black tracking-tight text-slate-800 mt-1">
+                            PRIORA
                         </p>
                     </div>
                 </div>
