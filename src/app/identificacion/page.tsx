@@ -80,11 +80,27 @@ export default function IdentificationPage() {
                 }),
             });
 
-            if (!res.ok) throw new Error("Error al guardar datos");
+            if (!res.ok) {
+                // Parse error message
+                const data = await res.json().catch(() => ({}));
+
+                // Specific handling for Session Not Found (404) or bad permissions
+                if (res.status === 404 || (data.error && data.error.includes("not found"))) {
+                    alert("⚠️ Tu sesión ha expirado o no existe. Por favor, vuelve a escanear el código QR para empezar de nuevo.");
+                    router.push("/start"); // Or wherever the landing is
+                    return;
+                }
+
+                throw new Error(data.error || "Error al guardar datos");
+            }
 
             router.push("/wizard");
-        } catch (err) {
-            alert("Hubo un error al guardar tus datos. Inténtalo de nuevo.");
+        } catch (err: any) {
+            console.error(err);
+            // Don't show generic error if we already handled redirect
+            if (window.location.pathname.includes("/start")) return;
+
+            alert(`Hubo un error al conectar con el servidor. Inténtalo de nuevo.\nDetalle: ${err.message}`);
             setLoading(false);
         }
     };
