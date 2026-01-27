@@ -97,8 +97,8 @@ export default function WizardPage() {
     };
 
     const handleBack = async () => {
-        // Save current progress before going back
-        await saveSession(answers);
+        // Save background (fire and forget)
+        saveSession(answers);
 
         if (history.length > 0) {
             const prev = history[history.length - 1];
@@ -117,13 +117,18 @@ export default function WizardPage() {
         const val = answers[currentQuestion.id];
         const isEmpty = val === undefined || val === null || val === "" || (Array.isArray(val) && val.length === 0);
 
-        if (currentQuestion.required && isEmpty) {
+        // Determine if required. Default to TRUE for all input types unless explicitly false.
+        // 'info' type maps to nothing so it's never empty (conceptually), but let's be safe.
+        const isInfo = currentQuestion.type === 'info';
+        const isRequired = currentQuestion.required !== false; // Default strict
+
+        if (!isInfo && isRequired && isEmpty) {
             alert("⚠️ Esta pregunta es obligatoria. Por favor selecciona una respuesta.");
             return;
         }
 
-        // Save progress before moving forward
-        await saveSession(answers);
+        // Save background
+        saveSession(answers);
 
         const currIdx = allQuestions.findIndex(q => q.id === currentQuestion.id);
         let nextIdx = currIdx + 1;
