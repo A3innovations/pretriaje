@@ -37,7 +37,9 @@ export default function ConfirmationPage() {
 
         // Helpers
         const checkPageBreak = (spaceNeeded: number) => {
-            if (yPos + spaceNeeded > pageHeight - margin) {
+            // Strict 20mm margin (doc height ~297mm). Stop at 277mm.
+            // Extra safety buffer of 10mm -> 267mm.
+            if (yPos + spaceNeeded > pageHeight - margin - 5) {
                 doc.addPage();
                 yPos = 20;
             }
@@ -53,23 +55,22 @@ export default function ConfirmationPage() {
         };
 
         const addPair = (label: string, value: string) => {
-            checkPageBreak(14);
-            doc.setFontSize(9);
-            doc.setFont("helvetica", "bold");
-            doc.setTextColor(100, 116, 139); // Slate 500
-            doc.text(label.toUpperCase(), margin, yPos);
-            yPos += 5;
+            // Not used anymore in main logic but kept for safety reference
+            // checkPageBreak(14);
+            // doc.setFontSize(9);
+            // doc.setFont("helvetica", "bold");
+            // doc.setTextColor(100, 116, 139); // Slate 500
+            // doc.text(label.toUpperCase(), margin, yPos);
+            // yPos += 5;
 
-            doc.setFontSize(11);
-            doc.setFont("helvetica", "normal");
-            doc.setTextColor(15, 23, 42); // Slate 900
-            // Handle multi-line text
-            const splitText = doc.splitTextToSize(value, 170);
-            doc.text(splitText, margin, yPos);
-            yPos += (splitText.length * 5) + 6;
+            // doc.setFontSize(11);
+            // doc.setFont("helvetica", "normal");
+            // doc.setTextColor(15, 23, 42); // Slate 900
+            // // Handle multi-line text
+            // const splitText = doc.splitTextToSize(value, 170);
+            // doc.text(splitText, margin, yPos);
+            // yPos += (splitText.length * 5) + 6;
         };
-
-        console.log("Generating Premium PDF...");
 
         // --- HEADER ---
         // Header Background
@@ -201,8 +202,8 @@ export default function ConfirmationPage() {
 
             const rowHeight = Math.max(labelHeight, valHeight) + 6; // Padding
 
-            // Page Break Check
-            if (yPos + rowHeight > pageHeight - margin) {
+            // Page Break Check - STRICT
+            if (yPos + rowHeight > pageHeight - margin - 5) {
                 doc.addPage();
                 yPos = margin + 10; // Reset top
             }

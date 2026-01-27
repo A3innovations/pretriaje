@@ -43,7 +43,8 @@ export default function WizardPage() {
     // -- Logic --
     const allQuestions = useMemo(() => {
         let qList = [...config.core];
-        const exposures = (answers["exposures"] as string[]) || [];
+        // Fix: Use correct ID for tasks/exposures
+        const exposures = (answers["q1_4_tasks"] as string[]) || (answers["exposures"] as string[]) || [];
 
         config.modules.forEach(mod => {
             if (mod.trigger.exposuresIncludes) {
@@ -131,9 +132,15 @@ export default function WizardPage() {
         saveSession(answers);
 
         const currIdx = allQuestions.findIndex(q => q.id === currentQuestion.id);
+
+        // Critical Fix: Logic to find next visible question
         let nextIdx = currIdx + 1;
 
-        while (nextIdx < allQuestions.length) {
+        // Safety check to prevent infinite loop (though length is finite)
+        let loopCount = 0;
+        const maxLoops = allQuestions.length + 5;
+
+        while (nextIdx < allQuestions.length && loopCount < maxLoops) {
             const q = allQuestions[nextIdx];
             let isVisible = true;
             if (q.showIf) {
@@ -142,6 +149,7 @@ export default function WizardPage() {
             }
             if (isVisible) break;
             nextIdx++;
+            loopCount++;
         }
 
         if (nextIdx >= allQuestions.length) {
@@ -162,10 +170,9 @@ export default function WizardPage() {
             <div className="sticky top-0 bg-white/80 backdrop-blur-md z-20 border-b border-slate-200">
                 <div className="max-w-md mx-auto px-6 py-4">
                     <div className="flex justify-between items-center mb-2">
-                        <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                            Pregunta {currentIndex} / {allQuestions.length}
-                        </span>
-                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full">
+                        {/* Removed Text Counter as requested */}
+                        <div />
+                        <span className="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-1 rounded-full ml-auto">
                             {Math.round((currentIndex / allQuestions.length) * 100)}% Completado
                         </span>
                     </div>

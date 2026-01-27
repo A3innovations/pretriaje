@@ -180,8 +180,8 @@ function PanelContent() {
                                                 <span className="inline-flex items-center px-4 py-1.5 rounded-full text-sm font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 shadow-sm">
                                                     <CheckCircle size={14} className="mr-1.5" strokeWidth={2.5} /> REVISADO
                                                 </span> :
-                                                <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-semibold bg-white text-slate-400 border border-slate-200">
-                                                    Pendiente
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 shadow-sm">
+                                                    ⚠️ PENDIENTE
                                                 </span>
                                             }
                                         </td>
