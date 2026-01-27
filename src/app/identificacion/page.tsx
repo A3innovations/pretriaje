@@ -24,9 +24,33 @@ export default function IdentificationPage() {
         }
     }, [router]);
 
+    // DNI/NIE Validation Helper
+    const isValidDNI = (dni: string) => {
+        let str = dni.toUpperCase().trim();
+        // Regex for standard DNI or NIE
+        // NIE X/Y/Z -> requires replacing with 0/1/2
+        if (!/^[XYZ0-9][0-9]{7}[A-Z]$/.test(str)) return false;
+
+        let numberPart = str.substring(0, 8);
+        const letter = str.substring(8, 9);
+
+        // Handle NIE
+        numberPart = numberPart.replace('X', '0').replace('Y', '1').replace('Z', '2');
+
+        const number = parseInt(numberPart, 10);
+        const letters = "TRWAGMYFPDXBNJZSQVHLCKE";
+        return letters[number % 23] === letter;
+    };
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!sessionId) return;
+
+        // Validation: DNI / NIE Format
+        if (!isValidDNI(dni)) {
+            alert("El DNI o NIE introducido no es válido. Comprueba el formato y la letra.");
+            return;
+        }
 
         // Validation: 18+
         if (dob) {
@@ -50,7 +74,7 @@ export default function IdentificationPage() {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    worker_id: dni,
+                    worker_id: dni.toUpperCase().trim(),
                     dob: dob,
                     worker_email: email,
                 }),
