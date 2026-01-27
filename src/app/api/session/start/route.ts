@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
         // 1. Try Stateless Validation (Base64)
         let isValidStateless = false;
         try {
-            const decoded = JSON.parse(Buffer.from(token, 'base64').toString('ascii'));
+            const decoded = JSON.parse(Buffer.from(token, 'base64url').toString('ascii'));
             if (decoded.c === campaignId && decoded.e > Date.now()) {
                 isValidStateless = true;
             } else if (decoded.e <= Date.now()) {

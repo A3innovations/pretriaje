@@ -52,40 +52,25 @@ export default function AdminQRPage() {
         fetchToken();
     }, []);
 
-    // Auto-Rotate every 60 seconds
-    useEffect(() => {
-        const interval = setInterval(() => {
-            rotateToken(true);
-        }, 60000); // 60 seconds
-        return () => clearInterval(interval);
-    }, []);
+    // Auto-Rotation disabled per user feedback (expires too fast)
+    // useEffect(() => {
+    //     const interval = setInterval(() => {
+    //         rotateToken(true);
+    //     }, 60000); // 60 seconds
+    //     return () => clearInterval(interval);
+    // }, []);
 
     // Countdown Logic (Visual only for the 60s reset)
+    // Disabled visual timer too since we disabled rotation
     const [progress, setProgress] = useState(100);
-    useEffect(() => {
-        const updateTimer = () => {
-            const now = new Date();
-            const diff = now.getTime() - lastUpdated.getTime();
-            const remaining = Math.max(0, 60000 - diff);
-
-            // Progress bar
-            setProgress((remaining / 60000) * 100);
-
-            // Timer string
-            const seconds = Math.floor(remaining / 1000);
-            setExpiresIn(`00:00:${seconds.toString().padStart(2, '0')}`);
-        };
-
-        const timer = setInterval(updateTimer, 100);
-        return () => clearInterval(timer);
-    }, [lastUpdated]);
+    // useEffect(() => { ... }, [lastUpdated]); 
 
     const [baseUrl, setBaseUrl] = useState("");
     useEffect(() => {
         setBaseUrl(window.location.origin);
     }, []);
 
-    const fullUrl = `${baseUrl}/start?campaign_id=${campaignId}&token=${qrData.token}`;
+    const fullUrl = `${baseUrl}/start?campaign_id=${campaignId}&token=${encodeURIComponent(qrData.token)}`;
 
     const copyToClipboard = () => {
         navigator.clipboard.writeText(fullUrl);

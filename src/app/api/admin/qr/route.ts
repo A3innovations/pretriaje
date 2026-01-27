@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
             s: Math.random().toString(36).substring(7) // salt
         };
 
-        const newToken = Buffer.from(JSON.stringify(payload)).toString('base64');
+        const newToken = Buffer.from(JSON.stringify(payload)).toString('base64url');
 
         // We still update DB for local consistency in the same lambda
         db.rotateCampaignToken(campaignId);
