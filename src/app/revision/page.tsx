@@ -60,7 +60,8 @@ export default function RevisionPage() {
     const getQuestionText = (id: string) => {
         let q = questionsData.core.find((q: any) => q.id === id);
         if (!q) {
-            for (const mod of questionsData.modules) {
+            const modules = (questionsData as any).modules;
+            for (const mod of modules) {
                 q = mod.questions.find((q: any) => q.id === id);
                 if (q) break;
             }
