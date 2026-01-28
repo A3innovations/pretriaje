@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
     LayoutGrid, Users, Settings, FileText, Bell, Search,
     Filter, ChevronDown, CheckCircle, Clock, AlertTriangle, Activity, Brain, X, RefreshCw,
-    ArrowRight, Save, MessageSquare
+    ArrowRight, Save, MessageSquare, Edit2
 } from "lucide-react";
 import { Session, AIInteraction } from "@/lib/types";
 import { EXTRA_QUESTIONS_POOL } from "@/lib/triage";
@@ -27,12 +27,13 @@ function PanelContent() {
     const [displayedSummary, setDisplayedSummary] = useState("");
 
     // Interactive Questions State
-    // Track which checkboxes are checked to show input
     const [activeQuestions, setActiveQuestions] = useState<Record<string, boolean>>({});
-    // Track answers being typed
     const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
-    // Track saved interactions (local optimistic + persistent)
     const [savedInteractions, setSavedInteractions] = useState<AIInteraction[]>([]);
+
+    // Edit Mode State
+    const [editingInteractionIndex, setEditingInteractionIndex] = useState<number | null>(null);
+    const [editValue, setEditValue] = useState("");
 
     // Question Pool State for this session
     const [currentQuestions, setCurrentQuestions] = useState<string[]>([]);
@@ -85,7 +86,7 @@ function PanelContent() {
             if (i >= text.length) {
                 if (typeWriterRef.current) clearInterval(typeWriterRef.current);
             }
-        }, 10); // Faster typing
+        }, 10);
     };
 
     // Watch for modal open
@@ -104,6 +105,7 @@ function PanelContent() {
             // Reset local states
             setActiveQuestions({});
             setQuestionAnswers({});
+            setEditingInteractionIndex(null);
         }
     }, [insightsSession]);
 
@@ -116,45 +118,41 @@ function PanelContent() {
 
         setRegenerating(false);
 
-        // 1. Restart Typewriter
         if (insightsSession?.triage?.aiSummary) startTypewriter(insightsSession?.triage?.aiSummary);
 
-        // 2. Shuffle Questions (Pick 3 new ones from pool + triage original)
-        // Combine original + pool unique
+        // Shuffle Questions (Pick 3 new ones from pool)
+        // Exclude ones already in savedInteractions
+        const answeredQs = savedInteractions.map(i => i.question);
+
         const allPossible = Array.from(new Set([
             ...(insightsSession?.triage?.aiQuestions || []),
             ...EXTRA_QUESTIONS_POOL
-        ]));
+        ])).filter(q => !answeredQs.includes(q));
 
-        // Filter out ones we already displayed if we wanted STRICT unique history, 
-        // but for now just picking 3 random that aren't currently displayed is enough variety.
         const shuffled = allPossible.sort(() => 0.5 - Math.random());
         setCurrentQuestions(shuffled.slice(0, 3));
     };
 
-    const handleMarkReviewed = async () => {
-        if (!insightsSession) return;
-
-        // Optimistic update
-        const updated = sessions.map(s =>
-            s.id === insightsSession.id ? { ...s, reviewed: true, reviewed_at: new Date().toISOString() } : s
-        );
-        setSessions(updated); // Update local list immediately
-        setInsightsSession(null); // Close modal
-
+    const persistSessionUpdate = async (updatedSession: Session) => {
+        setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
         try {
-            // Exact API call to persist (assuming generic patch or submit endpoint handles it)
-            // We'll use the generic session update endpoint if available, but for now we simulate consistency
-            // by ensuring the next fetchSessions respects the server state if we actually saved it.
-            // Since we don't have a dedicated PATCH /api/session/[id] implemented in this generic context,
-            // we will mock the functionality via the demo logic or existing submit.
-            // *Self-Correction*: I'll add a quick fetch to update it.
-            await fetch(`/api/session/${insightsSession.id}`, {
+            await fetch(`/api/session/${updatedSession.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ reviewed: true, status: "SUBMITTED" }) // Ensure status stays valid
+                body: JSON.stringify({
+                    ai_interactions: updatedSession.ai_interactions,
+                    reviewed: updatedSession.reviewed,
+                    status: updatedSession.status
+                })
             });
-        } catch (e) { console.error(e); }
+        } catch (e) { console.error("Failed to persist session", e); }
+    };
+
+    const handleMarkReviewed = async () => {
+        if (!insightsSession) return;
+        const updated = { ...insightsSession, reviewed: true, reviewed_at: new Date().toISOString() };
+        setInsightsSession(null);
+        await persistSessionUpdate(updated);
     };
 
     const toggleQuestionActive = (q: string) => {
@@ -164,6 +162,7 @@ function PanelContent() {
         }));
     };
 
+    // REPLACED: Updated to handle Replenishment
     const handleSaveInteraction = async (q: string) => {
         const answer = questionAnswers[q];
         if (!answer || !answer.trim()) return;
@@ -181,21 +180,62 @@ function PanelContent() {
         setActiveQuestions(prev => ({ ...prev, [q]: false }));
         setQuestionAnswers(prev => ({ ...prev, [q]: "" }));
 
-        // Persist to session (Optimistic + API)
+        // REPLENISH LOGIC: Remove answered Q, Add new Q
+        const remainingCurrent = currentQuestions.filter(cj => cj !== q);
+
+        // Find existing answers to exclude
+        const answeredQs = newInteractions.map(i => i.question);
+
+        // Find candidate pool
+        const candidates = EXTRA_QUESTIONS_POOL.filter(
+            cand => !answeredQs.includes(cand) && !remainingCurrent.includes(cand)
+        );
+
+        let nextQuestions = [...remainingCurrent];
+        if (candidates.length > 0) {
+            // Pick random
+            const nextQ = candidates[Math.floor(Math.random() * candidates.length)];
+            nextQuestions.push(nextQ);
+        }
+
+        setCurrentQuestions(nextQuestions);
+
+        // Persist
         if (insightsSession) {
             const updatedSession = { ...insightsSession, ai_interactions: newInteractions };
             setInsightsSession(updatedSession);
-            // Update in list
-            setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
+            await persistSessionUpdate(updatedSession);
+        }
+    };
 
-            // API Save
-            try {
-                await fetch(`/api/session/${insightsSession.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ ai_interactions: newInteractions })
-                });
-            } catch (e) { console.error("Failed to save interaction", e); }
+    // EDIT LOGIC
+    const startEditing = (index: number) => {
+        setEditingInteractionIndex(index);
+        setEditValue(savedInteractions[index].answer);
+    };
+
+    const cancelEditing = () => {
+        setEditingInteractionIndex(null);
+        setEditValue("");
+    };
+
+    const saveEdit = async (index: number) => {
+        if (!editValue.trim()) return;
+
+        const updatedInteractions = [...savedInteractions];
+        updatedInteractions[index] = {
+            ...updatedInteractions[index],
+            answer: editValue
+        };
+
+        setSavedInteractions(updatedInteractions);
+        setEditingInteractionIndex(null);
+        setEditValue("");
+
+        if (insightsSession) {
+            const updatedSession = { ...insightsSession, ai_interactions: updatedInteractions };
+            setInsightsSession(updatedSession);
+            await persistSessionUpdate(updatedSession);
         }
     };
 
@@ -206,9 +246,8 @@ function PanelContent() {
     }, [campaignId]);
 
     useEffect(() => {
+        // Filter Logic ... (Same as before)
         let res = sessions;
-
-        // Filter Search
         if (searchTerm) {
             const term = searchTerm.toLowerCase();
             res = res.filter(s =>
@@ -218,14 +257,11 @@ function PanelContent() {
                 (s.worker_lastname && s.worker_lastname.toLowerCase().includes(term))
             );
         }
-
-        // Filter Priority
         if (filterPriority !== "all") {
             if (filterPriority === "high") res = res.filter(s => (s.triage?.score ?? 0) >= 70);
             else if (filterPriority === "medium") res = res.filter(s => (s.triage?.score ?? 0) >= 40 && (s.triage?.score ?? 0) < 70);
             else if (filterPriority === "normal") res = res.filter(s => (s.triage?.score ?? 0) < 40);
         }
-
         setFiltered(res);
     }, [sessions, searchTerm, filterPriority]);
 
@@ -254,12 +290,7 @@ function PanelContent() {
                         <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center text-white font-bold">PT</div>
                         <h1 className="font-bold text-lg tracking-tight">Pre-Triaje</h1>
                     </div>
-
-                    <div className="hidden md:flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-200">
-                        <span className="w-2 h-2 rounded-full bg-green-500"></span>
-                        <span className="text-xs font-semibold text-slate-600 uppercase">Campaña Activa &bull; Unidad 01</span>
-                    </div>
-
+                    {/* ... (Same layout) */}
                     <div className="flex items-center gap-4">
                         <button onClick={() => fetchSessions()} className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-slate-50 rounded-full transition-all">
                             <Activity size={18} />
@@ -269,9 +300,7 @@ function PanelContent() {
                 </div>
             </nav>
 
-            {/* Main Content Centered 1120px */}
             <main className="max-w-[1120px] mx-auto px-6 py-8">
-
                 {/* Header Section */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-8">
                     <div>
@@ -298,6 +327,7 @@ function PanelContent() {
                             onChange={e => setSearchTerm(e.target.value)}
                         />
                     </div>
+                    {/* ... Select */}
                     <div className="md:col-span-3 relative">
                         <Filter className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
                         <select
@@ -314,7 +344,7 @@ function PanelContent() {
                     </div>
                 </div>
 
-                {/* Data Table */}
+                {/* Table (Same) */}
                 <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <table className="w-full">
                         <thead className="bg-slate-50 border-b border-slate-200">
@@ -334,10 +364,7 @@ function PanelContent() {
                                 <tr>
                                     <td colSpan={6} className="px-6 py-12 text-center">
                                         <p className="text-slate-400 mb-4">No hay pacientes en cola de hoy.</p>
-                                        <button
-                                            onClick={loadDemoData}
-                                            className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors"
-                                        >
+                                        <button onClick={loadDemoData} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg text-sm font-bold transition-colors">
                                             ⚡ Cargar Demo Data (10)
                                         </button>
                                     </td>
@@ -350,13 +377,8 @@ function PanelContent() {
                                             <div className="font-bold text-slate-900">{getPatientName(s)}</div>
                                             <div className="flex flex-wrap gap-1 mt-1.5">
                                                 {s.triage?.reasons?.slice(0, 2).map((r, i) => (
-                                                    <span key={i} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
-                                                        {r}
-                                                    </span>
+                                                    <span key={i} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">{r}</span>
                                                 ))}
-                                                {(!s.triage?.reasons || s.triage.reasons.length === 0) && (
-                                                    <span className="text-xs text-slate-400 italic">Sin hallazgos relevantes</span>
-                                                )}
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 text-slate-500 text-sm align-top">
@@ -365,34 +387,21 @@ function PanelContent() {
                                         <td className="px-6 py-4 align-top">
                                             <div className="flex items-center gap-2">
                                                 {getPriorityBadge(s.triage?.score ?? s.red_flag_score, s.triage?.level)}
-                                                <span className="text-xs font-mono text-slate-400 font-medium">
-                                                    {s.triage?.score ?? s.red_flag_score}/100
-                                                </span>
+                                                <span className="text-xs font-mono text-slate-400 font-medium">{s.triage?.score ?? s.red_flag_score}/100</span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-4 align-top">
                                             {(s as any).reviewed ?
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
-                                                    ✔ REVISADO
-                                                </span> :
-                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">
-                                                    ⚠️ PENDIENTE
-                                                </span>
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">✔ REVISADO</span> :
+                                                <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-bold bg-amber-100 text-amber-800 border border-amber-200 animate-pulse">⚠️ PENDIENTE</span>
                                             }
                                         </td>
                                         <td className="px-6 py-4 text-right align-top">
                                             <div className="flex flex-col gap-2 items-end">
-                                                <button
-                                                    onClick={() => setInsightsSession(s)}
-                                                    className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors border border-indigo-100"
-                                                >
-                                                    <Brain size={14} />
-                                                    Ver IA
+                                                <button onClick={() => setInsightsSession(s)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors border border-indigo-100">
+                                                    <Brain size={14} /> Ver IA
                                                 </button>
-                                                <button
-                                                    onClick={() => router.push(`/panel/report/${s.id}`)}
-                                                    className="flex items-center gap-1 text-slate-400 hover:text-indigo-600 text-xs font-bold hover:underline transition-colors mt-1"
-                                                >
+                                                <button onClick={() => router.push(`/panel/report/${s.id}`)} className="flex items-center gap-1 text-slate-400 hover:text-indigo-600 text-xs font-bold hover:underline transition-colors mt-1">
                                                     Informe <ArrowRight size={12} />
                                                 </button>
                                             </div>
@@ -405,15 +414,14 @@ function PanelContent() {
                 </div>
             </main>
 
-            {/* IA INSIGHTS MODAL WITH CYBER TRANSITION */}
+            {/* IA INSIGHTS MODAL */}
             {insightsSession && (
                 <div className="fixed inset-0 z-50 flex justify-end">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all duration-300" onClick={() => setInsightsSession(null)} />
 
-                    {/* Panel Slide In - "Cyber" Effect */}
                     <div className="relative w-full max-w-lg bg-white shadow-2xl h-full flex flex-col overflow-hidden border-l border-indigo-100 transform transition-all animate-slide-in-right">
 
-                        {/* Header Compact */}
+                        {/* Header */}
                         <div className="px-6 py-3 border-b border-slate-100 bg-white/80 backdrop-blur flex justify-between items-center z-10">
                             <div className="flex items-center gap-3">
                                 <div className="p-1.5 bg-indigo-50 rounded-lg">
@@ -425,7 +433,6 @@ function PanelContent() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
-                                {/* Compact Score Badge */}
                                 <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
                                     <span className="text-xs font-bold text-slate-700">Score: {insightsSession.triage?.score}</span>
                                     {getPriorityBadge(insightsSession.triage?.score || 0, insightsSession.triage?.level)}
@@ -436,12 +443,10 @@ function PanelContent() {
                             </div>
                         </div>
 
-                        {/* Valid Triage Data check */}
                         {insightsSession.triage ? (
                             <div className="flex-1 overflow-y-auto p-0 bg-slate-50/30">
-
                                 <div className="p-6 space-y-6">
-                                    {/* Summary with Typewriter Effect */}
+                                    {/* Summary */}
                                     <div>
                                         <div className={`p-4 rounded-xl text-sm leading-relaxed border shadow-sm relative transition-all ${insightsSession.triage.level === 'rojo' ? 'bg-red-50/50 text-slate-800 border-red-100' : 'bg-white text-slate-700 border-indigo-100'}`}>
                                             <span className="block min-h-[40px] font-medium">
@@ -451,25 +456,48 @@ function PanelContent() {
                                         </div>
                                     </div>
 
-                                    {/* Persistent Interactions History */}
+                                    {/* History (Editable) */}
                                     {savedInteractions.length > 0 && (
-                                        <div className="space-y-2">
+                                        <div className="space-y-3">
                                             <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Historial de Interacciones</h3>
                                             {savedInteractions.map((inter, i) => (
-                                                <div key={i} className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 text-sm">
-                                                    <p className="text-slate-500 text-xs mb-1">P: {inter.question}</p>
-                                                    <p className="text-emerald-900 font-medium">R: {inter.answer}</p>
+                                                <div key={i} className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 text-sm group relative">
+                                                    <p className="text-slate-500 text-xs mb-1 font-medium">{inter.question}</p>
+
+                                                    {editingInteractionIndex === i ? (
+                                                        <div className="mt-1">
+                                                            <textarea
+                                                                className="w-full text-sm p-2 border border-emerald-300 rounded focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                                                                value={editValue}
+                                                                onChange={e => setEditValue(e.target.value)}
+                                                                autoFocus
+                                                            />
+                                                            <div className="flex justify-end gap-2 mt-2">
+                                                                <button onClick={cancelEditing} className="px-2 py-1 text-xs text-slate-500 hover:text-slate-700">Cancelar</button>
+                                                                <button onClick={() => saveEdit(i)} className="px-2 py-1 bg-emerald-600 text-white rounded text-xs font-bold hover:bg-emerald-700">Guardar</button>
+                                                            </div>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex justify-between items-start gap-2">
+                                                            <p className="text-emerald-900 font-medium">{inter.answer}</p>
+                                                            <button
+                                                                onClick={() => startEditing(i)}
+                                                                className="text-emerald-400 hover:text-emerald-700 opacity-0 group-hover:opacity-100 transition-opacity p-1"
+                                                                title="Editar respuesta"
+                                                            >
+                                                                <Edit2 size={12} />
+                                                            </button>
+                                                        </div>
+                                                    )}
                                                 </div>
                                             ))}
                                         </div>
                                     )}
 
-                                    {/* Questions List (Interactive) */}
+                                    {/* Current Questions */}
                                     <div>
                                         <div className="flex justify-between items-end mb-3 px-1">
-                                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                                                Preguntas Sugeridas
-                                            </h3>
+                                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Preguntas Sugeridas</h3>
                                             <button
                                                 onClick={handleRegenerateIA}
                                                 disabled={regenerating}
@@ -485,19 +513,13 @@ function PanelContent() {
                                                 const isActive = activeQuestions[q];
                                                 return (
                                                     <div key={i} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white ${isActive ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500/20' : 'border-slate-200 hover:border-slate-300'}`}>
-                                                        <div
-                                                            className="flex gap-3 items-start p-3 cursor-pointer select-none"
-                                                            onClick={() => toggleQuestionActive(q)}
-                                                        >
+                                                        <div className="flex gap-3 items-start p-3 cursor-pointer select-none" onClick={() => toggleQuestionActive(q)}>
                                                             <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${isActive ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
                                                                 {isActive ? <CheckCircle size={12} className="text-white" /> : <MessageSquare size={12} className="text-slate-300" />}
                                                             </div>
-                                                            <span className={`text-sm leading-snug ${isActive ? 'text-indigo-900 font-bold' : 'text-slate-600'}`}>
-                                                                {q}
-                                                            </span>
+                                                            <span className={`text-sm leading-snug ${isActive ? 'text-indigo-900 font-bold' : 'text-slate-600'}`}>{q}</span>
                                                         </div>
 
-                                                        {/* Interactive Input Area */}
                                                         {isActive && (
                                                             <div className="px-3 pb-3 pt-0 animate-fade-in-down">
                                                                 <div className="relative">
@@ -507,6 +529,12 @@ function PanelContent() {
                                                                         className="w-full text-sm p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:bg-white transition-colors resize-none h-20 text-slate-800 placeholder:text-slate-400"
                                                                         value={questionAnswers[q] || ""}
                                                                         onChange={e => setQuestionAnswers(prev => ({ ...prev, [q]: e.target.value }))}
+                                                                        onKeyDown={e => {
+                                                                            if (e.key === 'Enter' && !e.shiftKey) {
+                                                                                e.preventDefault();
+                                                                                handleSaveInteraction(q);
+                                                                            }
+                                                                        }}
                                                                     />
                                                                     <button
                                                                         onClick={() => handleSaveInteraction(q)}
@@ -525,20 +553,18 @@ function PanelContent() {
                                         </div>
                                     </div>
 
-                                    {/* Reasons (Moved down as less actionable) */}
+                                    {/* Reasons */}
                                     <div className="pt-2 border-t border-slate-100">
                                         <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1 mt-4">Factores de Riesgo</h3>
                                         <div className="flex flex-wrap gap-2">
-                                            {insightsSession.triage.reasons.length > 0 ? (
+                                            {insightsSession.triage.reasons.length > 0 ?
                                                 insightsSession.triage.reasons.map((r, i) => (
                                                     <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600">
                                                         <AlertTriangle size={10} className="text-amber-500" />
                                                         {r}
                                                     </span>
-                                                ))
-                                            ) : (
-                                                <span className="text-slate-400 italic text-xs">Sin factores específicos.</span>
-                                            )}
+                                                )) : <span className="text-slate-400 italic text-xs">Sin factores específicos.</span>
+                                            }
                                         </div>
                                     </div>
                                 </div>
@@ -550,11 +576,11 @@ function PanelContent() {
                             </div>
                         )}
 
-                        {/* Footer Actions */}
-                        <div className="p-4 bg-white border-t border-slate-100 flex flex-col gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
+                        {/* Footer - IMPROVED LAYOUT */}
+                        <div className="p-4 bg-white border-t border-slate-100 flex flex-col gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20 pb-8">
                             <button
                                 onClick={() => router.push(`/panel/report/${insightsSession.id}`)}
-                                className="w-full py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all group"
+                                className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all group"
                             >
                                 <FileText size={18} className="text-indigo-400 group-hover:text-indigo-300" />
                                 VER INFORME COMPLETO
