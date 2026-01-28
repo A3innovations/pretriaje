@@ -97,3 +97,15 @@ export function computeTriage(answers: Record<string, any>): TriageAnalysis {
         aiQuestions: aiQuestions.slice(0, 3) // Exactly 3
     };
 }
+
+export const EXTRA_QUESTIONS_POOL = [
+    "¿Has notado si el dolor aumenta con el reposo o con el movimiento?",
+    "¿Hay alguna postura antálgica que te alivie el síntoma?",
+    "¿Has tenido fiebre o escalofríos en las últimas horas?",
+    "¿Sientes hormigueo o pérdida de fuerza en alguna extremidad?",
+    "¿El síntoma se irradia hacia alguna otra zona del cuerpo?",
+    "¿Has comido algo fuera de lo habitual hoy?",
+    "¿Has estado en contacto con productos químicos recientemente?",
+    "¿Cómo calificarías tu nivel de estrés hoy del 0 al 10?",
+    "¿Has dormido bien la noche anterior (más de 6 horas)?"
+];

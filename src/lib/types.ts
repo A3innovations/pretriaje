@@ -15,6 +15,13 @@ export type Campaign = {
 
 export type SessionStatus = 'IN_PROGRESS' | 'SUBMITTED' | 'CANCELLED' | 'EXPIRED';
 
+// AI Interaction Data
+export type AIInteraction = {
+    question: string;
+    answer: string;
+    added_at: string;
+};
+
 export type Session = {
     id: string;
     campaign_id: string;
@@ -42,6 +49,7 @@ export type Session = {
 
     // AI Triage Data
     triage?: TriageAnalysis;
+    ai_interactions?: AIInteraction[];
 };
 
 export type TriageLevel = 'verde' | 'ambar' | 'rojo';

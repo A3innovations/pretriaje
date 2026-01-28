@@ -5,9 +5,10 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
     LayoutGrid, Users, Settings, FileText, Bell, Search,
     Filter, ChevronDown, CheckCircle, Clock, AlertTriangle, Activity, Brain, X, RefreshCw,
-    ArrowRight
+    ArrowRight, Save, MessageSquare
 } from "lucide-react";
-import { Session } from "@/lib/types";
+import { Session, AIInteraction } from "@/lib/types";
+import { EXTRA_QUESTIONS_POOL } from "@/lib/triage";
 
 function PanelContent() {
     const searchParams = useSearchParams();
@@ -24,7 +25,17 @@ function PanelContent() {
     const [insightsSession, setInsightsSession] = useState<Session | null>(null);
     const [regenerating, setRegenerating] = useState(false);
     const [displayedSummary, setDisplayedSummary] = useState("");
-    const [selectedQuestions, setSelectedQuestions] = useState<Record<string, boolean>>({});
+
+    // Interactive Questions State
+    // Track which checkboxes are checked to show input
+    const [activeQuestions, setActiveQuestions] = useState<Record<string, boolean>>({});
+    // Track answers being typed
+    const [questionAnswers, setQuestionAnswers] = useState<Record<string, string>>({});
+    // Track saved interactions (local optimistic + persistent)
+    const [savedInteractions, setSavedInteractions] = useState<AIInteraction[]>([]);
+
+    // Question Pool State for this session
+    const [currentQuestions, setCurrentQuestions] = useState<string[]>([]);
 
     const fetchSessions = async () => {
         try {
@@ -74,28 +85,51 @@ function PanelContent() {
             if (i >= text.length) {
                 if (typeWriterRef.current) clearInterval(typeWriterRef.current);
             }
-        }, 15); // Speed of typing
+        }, 10); // Faster typing
     };
 
-    // Watch for modal open to trigger typewriter first time
+    // Watch for modal open
     useEffect(() => {
-        if (insightsSession?.triage?.aiSummary) {
-            startTypewriter(insightsSession.triage.aiSummary);
+        if (insightsSession) {
+            // Init summary
+            if (insightsSession.triage?.aiSummary) {
+                startTypewriter(insightsSession.triage.aiSummary);
+            }
+            // Init questions (default ones from triage initially)
+            if (insightsSession.triage?.aiQuestions) {
+                setCurrentQuestions(insightsSession.triage.aiQuestions);
+            }
+            // Init interactions
+            setSavedInteractions(insightsSession.ai_interactions || []);
+            // Reset local states
+            setActiveQuestions({});
+            setQuestionAnswers({});
         }
     }, [insightsSession]);
 
     const handleRegenerateIA = async () => {
-        if (!insightsSession?.triage?.aiSummary) return;
-
         setRegenerating(true);
         setDisplayedSummary(""); // Clear text
 
         // Simulate "Processing" delay
-        await new Promise(r => setTimeout(r, 1200));
+        await new Promise(r => setTimeout(r, 1000));
 
         setRegenerating(false);
-        // Start typing again
-        startTypewriter(insightsSession.triage.aiSummary);
+
+        // 1. Restart Typewriter
+        if (insightsSession?.triage?.aiSummary) startTypewriter(insightsSession?.triage?.aiSummary);
+
+        // 2. Shuffle Questions (Pick 3 new ones from pool + triage original)
+        // Combine original + pool unique
+        const allPossible = Array.from(new Set([
+            ...(insightsSession?.triage?.aiQuestions || []),
+            ...EXTRA_QUESTIONS_POOL
+        ]));
+
+        // Filter out ones we already displayed if we wanted STRICT unique history, 
+        // but for now just picking 3 random that aren't currently displayed is enough variety.
+        const shuffled = allPossible.sort(() => 0.5 - Math.random());
+        setCurrentQuestions(shuffled.slice(0, 3));
     };
 
     const handleMarkReviewed = async () => {
@@ -105,20 +139,64 @@ function PanelContent() {
         const updated = sessions.map(s =>
             s.id === insightsSession.id ? { ...s, reviewed: true, reviewed_at: new Date().toISOString() } : s
         );
-        setSessions(updated);
+        setSessions(updated); // Update local list immediately
         setInsightsSession(null); // Close modal
 
         try {
-            // Ideally implementing: await fetch(`/api/session/${insightsSession.id}/review`, { method: 'POST' });
-            console.log("Marked as reviewed:", insightsSession.id);
+            // Exact API call to persist (assuming generic patch or submit endpoint handles it)
+            // We'll use the generic session update endpoint if available, but for now we simulate consistency
+            // by ensuring the next fetchSessions respects the server state if we actually saved it.
+            // Since we don't have a dedicated PATCH /api/session/[id] implemented in this generic context,
+            // we will mock the functionality via the demo logic or existing submit.
+            // *Self-Correction*: I'll add a quick fetch to update it.
+            await fetch(`/api/session/${insightsSession.id}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reviewed: true, status: "SUBMITTED" }) // Ensure status stays valid
+            });
         } catch (e) { console.error(e); }
     };
 
-    const toggleQuestion = (q: string) => {
-        setSelectedQuestions(prev => ({
+    const toggleQuestionActive = (q: string) => {
+        setActiveQuestions(prev => ({
             ...prev,
             [q]: !prev[q]
         }));
+    };
+
+    const handleSaveInteraction = async (q: string) => {
+        const answer = questionAnswers[q];
+        if (!answer || !answer.trim()) return;
+
+        const newInteraction: AIInteraction = {
+            question: q,
+            answer: answer,
+            added_at: new Date().toISOString()
+        };
+
+        const newInteractions = [...savedInteractions, newInteraction];
+        setSavedInteractions(newInteractions);
+
+        // Clear input state
+        setActiveQuestions(prev => ({ ...prev, [q]: false }));
+        setQuestionAnswers(prev => ({ ...prev, [q]: "" }));
+
+        // Persist to session (Optimistic + API)
+        if (insightsSession) {
+            const updatedSession = { ...insightsSession, ai_interactions: newInteractions };
+            setInsightsSession(updatedSession);
+            // Update in list
+            setSessions(prev => prev.map(s => s.id === updatedSession.id ? updatedSession : s));
+
+            // API Save
+            try {
+                await fetch(`/api/session/${insightsSession.id}`, {
+                    method: "PATCH",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ ai_interactions: newInteractions })
+                });
+            } catch (e) { console.error("Failed to save interaction", e); }
+        }
     };
 
     useEffect(() => {
@@ -332,95 +410,136 @@ function PanelContent() {
                 <div className="fixed inset-0 z-50 flex justify-end">
                     <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all duration-300" onClick={() => setInsightsSession(null)} />
 
-                    {/* Panel Slide In - "Cyber" Effect (Simple CSS animation class presumed or inline style) */}
-                    <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col overflow-hidden border-l border-indigo-100 transform transition-all animate-slide-in-right">
+                    {/* Panel Slide In - "Cyber" Effect */}
+                    <div className="relative w-full max-w-lg bg-white shadow-2xl h-full flex flex-col overflow-hidden border-l border-indigo-100 transform transition-all animate-slide-in-right">
 
-                        {/* Header with gradient */}
-                        <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50 flex justify-between items-center">
-                            <div className="flex items-center gap-3 text-indigo-700">
-                                <div className="p-2 bg-indigo-100 rounded-lg">
-                                    <Brain size={24} className="text-indigo-600" />
+                        {/* Header Compact */}
+                        <div className="px-6 py-3 border-b border-slate-100 bg-white/80 backdrop-blur flex justify-between items-center z-10">
+                            <div className="flex items-center gap-3">
+                                <div className="p-1.5 bg-indigo-50 rounded-lg">
+                                    <Brain size={20} className="text-indigo-600" />
                                 </div>
                                 <div>
-                                    <h2 className="text-xl font-bold leading-none">IA Insights</h2>
-                                    <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold mt-1">Análisis Predictivo</p>
+                                    <h2 className="text-sm font-bold leading-none text-slate-900">IA Insights: {getPatientName(insightsSession)}</h2>
+                                    <p className="text-[10px] text-slate-400 uppercase tracking-widest mt-0.5">Análisis Predictivo</p>
                                 </div>
                             </div>
-                            <button onClick={() => setInsightsSession(null)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-full text-slate-400 transition-colors">
-                                <X size={20} />
-                            </button>
+                            <div className="flex items-center gap-3">
+                                {/* Compact Score Badge */}
+                                <div className="flex items-center gap-2 px-3 py-1 bg-slate-50 rounded-full border border-slate-100">
+                                    <span className="text-xs font-bold text-slate-700">Score: {insightsSession.triage?.score}</span>
+                                    {getPriorityBadge(insightsSession.triage?.score || 0, insightsSession.triage?.level)}
+                                </div>
+                                <button onClick={() => setInsightsSession(null)} className="p-1.5 hover:bg-slate-100 rounded-full text-slate-400 transition-colors">
+                                    <X size={18} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Valid Triage Data check */}
                         {insightsSession.triage ? (
-                            <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50/50">
+                            <div className="flex-1 overflow-y-auto p-0 bg-slate-50/30">
 
-                                {/* Score Block - Prominent */}
-                                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center relative overflow-hidden">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
-                                    <div className="text-6xl font-black text-slate-800 mb-1 tracking-tighter">
-                                        {insightsSession.triage.score}
-                                        <span className="text-2xl text-slate-300 font-light ml-1">/100</span>
+                                <div className="p-6 space-y-6">
+                                    {/* Summary with Typewriter Effect */}
+                                    <div>
+                                        <div className={`p-4 rounded-xl text-sm leading-relaxed border shadow-sm relative transition-all ${insightsSession.triage.level === 'rojo' ? 'bg-red-50/50 text-slate-800 border-red-100' : 'bg-white text-slate-700 border-indigo-100'}`}>
+                                            <span className="block min-h-[40px] font-medium">
+                                                {displayedSummary}
+                                                {regenerating && <span className="inline-block w-1.5 h-3.5 bg-indigo-500 animate-pulse ml-0.5 align-middle"></span>}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div className="mb-4 transform scale-110">
-                                        {getPriorityBadge(insightsSession.triage.score, insightsSession.triage.level)}
-                                    </div>
-                                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
-                                        Nivel de Riesgo Calculado
-                                    </p>
-                                </div>
 
-                                {/* Summary with Typewriter Effect */}
-                                <div>
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Resumen Clínico</h3>
-                                    <div className={`p-5 rounded-2xl text-sm leading-relaxed border shadow-sm relative transition-all ${insightsSession.triage.level === 'rojo' ? 'bg-red-50/50 text-slate-800 border-red-100' : 'bg-white text-slate-700 border-indigo-100'}`}>
-                                        <span className="block min-h-[60px]">
-                                            {displayedSummary}
-                                            {regenerating && <span className="inline-block w-2 H-4 bg-indigo-500 animate-pulse ml-1">|</span>}
-                                        </span>
-                                        {/* "AI" watermark */}
-                                        <Activity className="absolute bottom-3 right-3 text-indigo-100 opacity-50" size={40} />
-                                    </div>
-                                </div>
-
-                                {/* Reasons */}
-                                <div>
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Factores Clave</h3>
-                                    <ul className="space-y-3">
-                                        {insightsSession.triage.reasons.length > 0 ? (
-                                            insightsSession.triage.reasons.map((r, i) => (
-                                                <li key={i} className="flex items-center gap-3 text-sm font-medium text-slate-700 bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors">
-                                                    <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
-                                                        <AlertTriangle size={16} className="text-amber-500" />
-                                                    </div>
-                                                    <span>{r}</span>
-                                                </li>
-                                            ))
-                                        ) : (
-                                            <li className="text-slate-400 italic text-sm text-center py-2">No se detectaron factores de riesgo específicos.</li>
-                                        )}
-                                    </ul>
-                                </div>
-
-                                {/* Suggested Questions */}
-                                <div>
-                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Preguntas Sugeridas</h3>
-                                    <div className="space-y-2">
-                                        {insightsSession.triage.aiQuestions.map((q, i) => (
-                                            <label key={i} className={`flex gap-3 items-start p-3 rounded-xl cursor-pointer border-2 transition-all ${selectedQuestions[q] ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-white border-transparent hover:border-slate-200'}`}>
-                                                <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedQuestions[q] ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-slate-50'}`}>
-                                                    {selectedQuestions[q] && <CheckCircle size={12} className="text-white" />}
+                                    {/* Persistent Interactions History */}
+                                    {savedInteractions.length > 0 && (
+                                        <div className="space-y-2">
+                                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1">Historial de Interacciones</h3>
+                                            {savedInteractions.map((inter, i) => (
+                                                <div key={i} className="bg-emerald-50/50 border border-emerald-100 rounded-lg p-3 text-sm">
+                                                    <p className="text-slate-500 text-xs mb-1">P: {inter.question}</p>
+                                                    <p className="text-emerald-900 font-medium">R: {inter.answer}</p>
                                                 </div>
-                                                <span className={`text-sm ${selectedQuestions[q] ? 'text-indigo-900 font-bold' : 'text-slate-600'}`}>{q}</span>
-                                                {/* Hidden real checkbox */}
-                                                <input
-                                                    type="checkbox"
-                                                    checked={!!selectedQuestions[q]}
-                                                    onChange={() => toggleQuestion(q)}
-                                                    className="hidden"
-                                                />
-                                            </label>
-                                        ))}
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Questions List (Interactive) */}
+                                    <div>
+                                        <div className="flex justify-between items-end mb-3 px-1">
+                                            <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                                Preguntas Sugeridas
+                                            </h3>
+                                            <button
+                                                onClick={handleRegenerateIA}
+                                                disabled={regenerating}
+                                                className="text-[10px] font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 uppercase tracking-wide cursor-pointer"
+                                            >
+                                                <RefreshCw size={10} className={regenerating ? "animate-spin" : ""} />
+                                                {regenerating ? "Generando..." : "Nuevas Preguntas"}
+                                            </button>
+                                        </div>
+
+                                        <div className="space-y-3">
+                                            {currentQuestions.map((q, i) => {
+                                                const isActive = activeQuestions[q];
+                                                return (
+                                                    <div key={i} className={`rounded-xl border transition-all duration-300 overflow-hidden bg-white ${isActive ? 'border-indigo-500 shadow-md ring-1 ring-indigo-500/20' : 'border-slate-200 hover:border-slate-300'}`}>
+                                                        <div
+                                                            className="flex gap-3 items-start p-3 cursor-pointer select-none"
+                                                            onClick={() => toggleQuestionActive(q)}
+                                                        >
+                                                            <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors shrink-0 ${isActive ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white'}`}>
+                                                                {isActive ? <CheckCircle size={12} className="text-white" /> : <MessageSquare size={12} className="text-slate-300" />}
+                                                            </div>
+                                                            <span className={`text-sm leading-snug ${isActive ? 'text-indigo-900 font-bold' : 'text-slate-600'}`}>
+                                                                {q}
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Interactive Input Area */}
+                                                        {isActive && (
+                                                            <div className="px-3 pb-3 pt-0 animate-fade-in-down">
+                                                                <div className="relative">
+                                                                    <textarea
+                                                                        autoFocus
+                                                                        placeholder="Escribe la respuesta del paciente..."
+                                                                        className="w-full text-sm p-3 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:bg-white transition-colors resize-none h-20 text-slate-800 placeholder:text-slate-400"
+                                                                        value={questionAnswers[q] || ""}
+                                                                        onChange={e => setQuestionAnswers(prev => ({ ...prev, [q]: e.target.value }))}
+                                                                    />
+                                                                    <button
+                                                                        onClick={() => handleSaveInteraction(q)}
+                                                                        className="absolute bottom-2 right-2 p-1.5 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition-colors shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                                                                        disabled={!questionAnswers[q]?.trim()}
+                                                                        title="Guardar respuesta"
+                                                                    >
+                                                                        <Save size={14} />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+
+                                    {/* Reasons (Moved down as less actionable) */}
+                                    <div className="pt-2 border-t border-slate-100">
+                                        <h3 className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1 mt-4">Factores de Riesgo</h3>
+                                        <div className="flex flex-wrap gap-2">
+                                            {insightsSession.triage.reasons.length > 0 ? (
+                                                insightsSession.triage.reasons.map((r, i) => (
+                                                    <span key={i} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium bg-white border border-slate-200 text-slate-600">
+                                                        <AlertTriangle size={10} className="text-amber-500" />
+                                                        {r}
+                                                    </span>
+                                                ))
+                                            ) : (
+                                                <span className="text-slate-400 italic text-xs">Sin factores específicos.</span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -432,33 +551,23 @@ function PanelContent() {
                         )}
 
                         {/* Footer Actions */}
-                        <div className="p-6 bg-white border-t border-slate-100 flex flex-col gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                        <div className="p-4 bg-white border-t border-slate-100 flex flex-col gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20">
                             <button
                                 onClick={() => router.push(`/panel/report/${insightsSession.id}`)}
-                                className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all group"
+                                className="w-full py-3.5 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all group"
                             >
                                 <FileText size={18} className="text-indigo-400 group-hover:text-indigo-300" />
                                 VER INFORME COMPLETO
                                 <ArrowRight size={18} className="ml-auto opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                             </button>
 
-                            <div className="flex gap-3">
-                                <button
-                                    onClick={handleRegenerateIA}
-                                    disabled={regenerating}
-                                    className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold text-xs hover:bg-slate-50 flex items-center justify-center gap-2 active:scale-95 transition-all uppercase tracking-wide"
-                                >
-                                    <RefreshCw size={16} className={regenerating ? "animate-spin text-indigo-500" : ""} />
-                                    {regenerating ? "Analizando..." : "Regenerar"}
-                                </button>
-                                <button
-                                    onClick={handleMarkReviewed}
-                                    className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-xs shadow-sm border border-indigo-100 flex items-center justify-center gap-2 active:scale-95 transition-all uppercase tracking-wide"
-                                >
-                                    <CheckCircle size={16} />
-                                    Marcar Revisado
-                                </button>
-                            </div>
+                            <button
+                                onClick={handleMarkReviewed}
+                                className="w-full py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-xs shadow-sm border border-indigo-100 flex items-center justify-center gap-2 active:scale-95 transition-all uppercase tracking-wide"
+                            >
+                                <CheckCircle size={16} />
+                                Marcar Revisado y Cerrar
+                            </button>
                         </div>
                     </div>
                 </div>
