@@ -89,23 +89,39 @@ function PanelContent() {
         }, 10);
     };
 
+    // Track last init session to prevent re-renders wiping state
+    const lastInitId = useRef<string | null>(null);
+
     // Watch for modal open
     useEffect(() => {
-        if (insightsSession) {
+        // Only run if we have a session and it's a DIFFERENT session than last time
+        if (insightsSession && insightsSession.id !== lastInitId.current) {
+            lastInitId.current = insightsSession.id;
+
             // Init summary
             if (insightsSession.triage?.aiSummary) {
                 startTypewriter(insightsSession.triage.aiSummary);
             }
             // Init questions (default ones from triage initially)
-            if (insightsSession.triage?.aiQuestions) {
-                setCurrentQuestions(insightsSession.triage.aiQuestions);
-            }
+            // IMPORTANT: If we have saved interactions, we should filter them out from the initial pool
+            // to avoid showing questions we already answered if they came from the triage list.
+            const existingAnswers = insightsSession.ai_interactions?.map(i => i.question) || [];
+            let initQuestions = insightsSession.triage?.aiQuestions || [];
+
+            // Filter out already answered ones from the suggestion list
+            initQuestions = initQuestions.filter(q => !existingAnswers.includes(q));
+
+            setCurrentQuestions(initQuestions);
+
             // Init interactions
             setSavedInteractions(insightsSession.ai_interactions || []);
             // Reset local states
             setActiveQuestions({});
             setQuestionAnswers({});
             setEditingInteractionIndex(null);
+        } else if (!insightsSession) {
+            // Reset ref when modal closes
+            lastInitId.current = null;
         }
     }, [insightsSession]);
 
@@ -580,11 +596,11 @@ function PanelContent() {
                         <div className="p-4 bg-white border-t border-slate-100 flex flex-col gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)] z-20 pb-8">
                             <button
                                 onClick={() => router.push(`/panel/report/${insightsSession.id}`)}
-                                className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all group"
+                                className="w-full py-3 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-lg flex items-center justify-center gap-3 active:scale-[0.98] transition-all group"
                             >
                                 <FileText size={18} className="text-indigo-400 group-hover:text-indigo-300" />
-                                VER INFORME COMPLETO
-                                <ArrowRight size={18} className="ml-auto opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                                <span>VER INFORME COMPLETO</span>
+                                <ArrowRight size={18} className="opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
                             </button>
 
                             <button
