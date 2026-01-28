@@ -27,6 +27,8 @@ export type Session = {
 
     // Worker Data
     worker_id?: string; // DNI/Employee No
+    worker_firstname?: string;
+    worker_lastname?: string;
     worker_id_last4?: string;
     dob?: string;
     worker_email?: string;

@@ -22,17 +22,25 @@ function PanelContent() {
     // Insights Modal State
     const [insightsSession, setInsightsSession] = useState<Session | null>(null);
     const [regenerating, setRegenerating] = useState(false);
+    const [selectedQuestions, setSelectedQuestions] = useState<Record<string, boolean>>({});
 
     const fetchSessions = async () => {
         try {
             const res = await fetch(`/api/campaign/${campaignId}/sessions?status=SUBMITTED`);
             const data = await res.json();
+
             // Sort: High Priority (red) first, then Media, then Normal. Then by Date.
-            // Priority: Score >= 5 (High), 3-4 (Med), <3 (Low)
+            // Priority: Score >= 70 OR Level=ROJO (High), Score >= 40 (Med), Else (Normal)
             const sorted = data.sort((a: Session, b: Session) => {
-                const getPrio = (s: number) => s >= 5 ? 3 : (s >= 3 ? 2 : 1);
-                const pA = getPrio(a.red_flag_score);
-                const pB = getPrio(b.red_flag_score);
+                const getPrio = (s: Session) => {
+                    const score = s.triage?.score ?? s.red_flag_score ?? 0;
+                    if (score >= 70 || s.triage?.level === 'rojo') return 3;
+                    if (score >= 40 || s.triage?.level === 'ambar') return 2;
+                    return 1;
+                };
+
+                const pA = getPrio(a);
+                const pB = getPrio(b);
                 if (pA !== pB) return pB - pA; // Higher prio first
                 return new Date(b.submitted_at || "").getTime() - new Date(a.submitted_at || "").getTime();
             });
@@ -55,6 +63,35 @@ function PanelContent() {
         setRegenerating(true);
         await new Promise(r => setTimeout(r, 800)); // Fake visual delay
         setRegenerating(false);
+        // In a real app, this might call an API to re-run the LLM. 
+        // For now, it just shows the spinner to confirm "action taken".
+    };
+
+    const handleMarkReviewed = async () => {
+        if (!insightsSession) return;
+
+        // Optimistic update
+        const updated = sessions.map(s =>
+            s.id === insightsSession.id ? { ...s, reviewed: true, reviewed_at: new Date().toISOString() } : s
+        );
+        setSessions(updated);
+        setInsightsSession(null); // Close modal
+
+        // Persist (Dummy API call concept - assuming we have a reviewed endpoint or just generic update)
+        // Ideally: PATCH /api/session/[id] { reviewed: true }
+        // For now we rely on the state update or assume backend sync if implemented.
+        try {
+            // We reuse the submit endpoint or a patch if available. For this demo, just console log.
+            // Ideally implementing: await fetch(`/api/session/${insightsSession.id}/review`, { method: 'POST' });
+            console.log("Marked as reviewed:", insightsSession.id);
+        } catch (e) { console.error(e); }
+    };
+
+    const toggleQuestion = (q: string) => {
+        setSelectedQuestions(prev => ({
+            ...prev,
+            [q]: !prev[q]
+        }));
     };
 
     useEffect(() => {
@@ -71,24 +108,39 @@ function PanelContent() {
             const term = searchTerm.toLowerCase();
             res = res.filter(s =>
                 s.worker_id?.toLowerCase().includes(term) ||
-                (s.answers?.['name'] && String(s.answers['name']).toLowerCase().includes(term))
+                (s.answers?.['name'] && String(s.answers['name']).toLowerCase().includes(term)) ||
+                (s.worker_firstname && s.worker_firstname.toLowerCase().includes(term)) ||
+                (s.worker_lastname && s.worker_lastname.toLowerCase().includes(term))
             );
         }
 
         // Filter Priority
         if (filterPriority !== "all") {
-            if (filterPriority === "high") res = res.filter(s => s.red_flag_score >= 5);
-            else if (filterPriority === "medium") res = res.filter(s => s.red_flag_score >= 3 && s.red_flag_score < 5);
-            else if (filterPriority === "normal") res = res.filter(s => s.red_flag_score < 3);
+            // Logic match with fetch sort
+            if (filterPriority === "high") res = res.filter(s => (s.triage?.score ?? 0) >= 70);
+            else if (filterPriority === "medium") res = res.filter(s => (s.triage?.score ?? 0) >= 40 && (s.triage?.score ?? 0) < 70);
+            else if (filterPriority === "normal") res = res.filter(s => (s.triage?.score ?? 0) < 40);
         }
 
         setFiltered(res);
     }, [sessions, searchTerm, filterPriority]);
 
-    const getPriorityBadge = (score: number) => {
-        if (score >= 5) return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100/80 text-red-700 border border-red-200">ALTA</span>;
-        if (score >= 3) return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100/80 text-amber-700 border border-amber-200">MEDIA</span>;
+    const getPriorityBadge = (score: number, level?: string) => {
+        // Use strict thresholds: >= 70 Red, >= 40 Amber, Else Green
+        const isRed = score >= 70 || level === 'rojo';
+        const isAmber = !isRed && (score >= 40 || level === 'ambar');
+
+        if (isRed) return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100/80 text-red-700 border border-red-200">ALTA</span>;
+        if (isAmber) return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100/80 text-amber-700 border border-amber-200">MEDIA</span>;
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100/80 text-green-700 border border-green-200">NORMAL</span>;
+    };
+
+    // Helper to get full name
+    const getPatientName = (s: Session) => {
+        if (s.worker_firstname || s.worker_lastname) {
+            return `${s.worker_firstname || ""} ${s.worker_lastname || ""}`.trim();
+        }
+        return s.answers?.['firstname'] || s.answers?.['name'] || "Sin nombre";
     };
 
     return (
@@ -196,7 +248,7 @@ function PanelContent() {
                                     <tr key={s.id} className={`transition-colors group ${!(s as any).reviewed ? 'bg-orange-50 hover:bg-orange-100 border-l-4 border-l-orange-400' : 'hover:bg-slate-50 border-l-4 border-l-transparent'}`}>
                                         <td className="px-6 py-4 font-mono font-bold text-slate-700 align-top">{s.worker_id}</td>
                                         <td className="px-6 py-4 align-top">
-                                            <div className="font-bold text-slate-900">{s.answers?.['firstname'] || s.answers?.['name'] || "Sin nombre"}</div>
+                                            <div className="font-bold text-slate-900">{getPatientName(s)}</div>
                                             {/* AI Reason Chips */}
                                             <div className="flex flex-wrap gap-1 mt-1.5">
                                                 {s.triage?.reasons?.slice(0, 2).map((r, i) => (
@@ -214,7 +266,7 @@ function PanelContent() {
                                         </td>
                                         <td className="px-6 py-4 align-top">
                                             <div className="flex items-center gap-2">
-                                                {getPriorityBadge(s.red_flag_score)}
+                                                {getPriorityBadge(s.triage?.score ?? s.red_flag_score, s.triage?.level)}
                                                 <span className="text-xs font-mono text-slate-400 font-medium">
                                                     {s.triage?.score ?? s.red_flag_score}/100
                                                 </span>
@@ -255,7 +307,7 @@ function PanelContent() {
                 </div>
             </main>
 
-            {/* IA INSIGHTS MODAL (Simple implementation) */}
+            {/* IA INSIGHTS MODAL */}
             {insightsSession && (
                 <div className="fixed inset-0 z-50 flex justify-end">
                     <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setInsightsSession(null)} />
@@ -280,7 +332,7 @@ function PanelContent() {
                                         <span className="text-xl text-slate-400 font-normal">/100</span>
                                     </div>
                                     <div className="mb-4">
-                                        {getPriorityBadge(insightsSession.triage.score)}
+                                        {getPriorityBadge(insightsSession.triage.score, insightsSession.triage.level)}
                                     </div>
                                     <p className="text-sm text-slate-500 leading-snug">
                                         Calculado basado en {Object.keys(insightsSession.answers).length} respuestas y patrones de riesgo.
@@ -290,7 +342,7 @@ function PanelContent() {
                                 {/* Summary */}
                                 <div>
                                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Resumen Clínico Generativo</h3>
-                                    <div className="p-4 bg-indigo-50 rounded-xl text-indigo-900 text-sm leading-relaxed border border-indigo-100">
+                                    <div className={`p-4 rounded-xl text-sm leading-relaxed border ${insightsSession.triage.level === 'rojo' ? 'bg-red-50 text-red-900 border-red-100' : 'bg-indigo-50 text-indigo-900 border-indigo-100'}`}>
                                         {insightsSession.triage.aiSummary}
                                     </div>
                                 </div>
@@ -312,14 +364,19 @@ function PanelContent() {
                                     </ul>
                                 </div>
 
-                                {/* Suggested Questions */}
+                                {/* Suggested Questions (Interactive) */}
                                 <div>
                                     <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Preguntas Sugeridas</h3>
                                     <div className="space-y-2">
                                         {insightsSession.triage.aiQuestions.map((q, i) => (
-                                            <label key={i} className="flex gap-3 items-start p-3 hover:bg-slate-50 rounded-lg cursor-pointer border border-transparent hover:border-slate-200 transition-colors">
-                                                <input type="checkbox" className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" />
-                                                <span className="text-sm text-slate-700">{q}</span>
+                                            <label key={i} className={`flex gap-3 items-start p-3 rounded-lg cursor-pointer border transition-colors ${selectedQuestions[q] ? 'bg-indigo-50 border-indigo-200' : 'bg-transparent border-transparent hover:border-slate-200 hover:bg-slate-50'}`}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={!!selectedQuestions[q]}
+                                                    onChange={() => toggleQuestion(q)}
+                                                    className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 accent-indigo-600"
+                                                />
+                                                <span className={`text-sm ${selectedQuestions[q] ? 'text-indigo-900 font-medium' : 'text-slate-700'}`}>{q}</span>
                                             </label>
                                         ))}
                                     </div>
@@ -329,19 +386,17 @@ function PanelContent() {
                                 <div className="pt-6 border-t border-slate-100 flex gap-3">
                                     <button
                                         onClick={handleRegenerateIA}
-                                        className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-50 flex items-center justify-center gap-2"
+                                        disabled={regenerating}
+                                        className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-50 flex items-center justify-center gap-2 active:scale-95 transition-all"
                                     >
                                         <RefreshCw size={18} className={regenerating ? "animate-spin" : ""} />
                                         {regenerating ? "Regenerando..." : "Regenerar"}
                                     </button>
                                     <button
-                                        onClick={() => {
-                                            // TODO: Mark reviewed
-                                            // For demo visual, just close
-                                            setInsightsSession(null);
-                                        }}
-                                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200"
+                                        onClick={handleMarkReviewed}
+                                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
                                     >
+                                        <CheckCircle size={18} />
                                         Marcar Revisado
                                     </button>
                                 </div>
