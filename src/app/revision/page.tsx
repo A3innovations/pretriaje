@@ -56,7 +56,24 @@ export default function RevisionPage() {
         }
     };
 
-    // ...
+    // Helpers
+    const getQuestionText = (id: string) => {
+        let q = questionsData.core.find((q: any) => q.id === id);
+        if (!q) {
+            for (const mod of questionsData.modules) {
+                q = mod.questions.find((q: any) => q.id === id);
+                if (q) break;
+            }
+        }
+        return q ? q.text : id;
+    };
+
+    const formatValue = (val: any) => {
+        if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : "Ninguna";
+        if (typeof val === "boolean") return val ? "Sí" : "No";
+        if (!val) return "-";
+        return val;
+    };
 
     if (analyzing) return (
         <div className="min-h-screen bg-indigo-600 flex flex-col items-center justify-center text-white p-6 font-sans">
