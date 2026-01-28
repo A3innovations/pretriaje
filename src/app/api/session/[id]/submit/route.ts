@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { RedFlag, Report, SessionStatus } from "@/lib/types";
+import { computeTriage } from "@/lib/triage";
 import questionsData from "@/lib/questions.json";
 
 export async function POST(
@@ -15,41 +16,8 @@ export async function POST(
             return NextResponse.json({ error: "Session not found" }, { status: 404 });
         }
 
-        // Calculate Red Flags & Score
-        const answers = session.answers;
-        const redFlags: RedFlag[] = [];
-        let score = 0;
-
-        // Process Red Flags Logic from JSON
-        // We iterate over all possible questions (core + modules)
-        const allQuestions = [...questionsData.core, ...questionsData.modules.flatMap(m => m.questions)];
-        const scoringMap = questionsData.scoring.redFlagScoreMap as Record<string, number>;
-
-        allQuestions.forEach((q: any) => {
-            const ans = answers[q.id];
-            if (!ans) return;
-
-            // key:value checks
-            // Simple check: if ans matches redFlagIf
-            if (q.redFlagIf && Array.isArray(q.redFlagIf)) {
-                // Handle single or multi
-                const check = Array.isArray(ans) ? ans : [ans];
-                const hasFlag = check.some((v: string) => q.redFlagIf.includes(v));
-
-                if (hasFlag) {
-                    redFlags.push({ title: q.text, detail: Array.isArray(ans) ? ans.join(", ") : ans });
-
-                    // Calculate score
-                    // Map key format: "questionId:Response"
-                    check.forEach((v: string) => {
-                        const key = `${q.id}:${v}`;
-                        if (scoringMap[key]) {
-                            score += scoringMap[key];
-                        }
-                    });
-                }
-            }
-        });
+        // 2. AI Triage Computation
+        const triage = computeTriage(session.answers);
 
         // Create Report
         const report: Report = {
@@ -58,9 +26,10 @@ export async function POST(
             campaign_id: session.campaign_id,
             created_at: new Date().toISOString(),
             summary: {
-                score,
-                redFlags,
-                answers
+                score: triage.score,
+                redFlags: triage.reasons.map(r => ({ title: r, detail: r })),
+                answers: session.answers,
+                triage
             }
         };
 
@@ -69,8 +38,9 @@ export async function POST(
         // Update Session
         db.updateSession(session.id, {
             status: 'SUBMITTED',
-            red_flag_score: score,
-            red_flags: redFlags,
+            red_flag_score: triage.score,
+            red_flags: triage.reasons.map(r => ({ title: r, detail: r })), // Map strings to RedFlag objects for compatibility
+            triage: triage,
             submitted_at: new Date().toISOString()
         });
 

@@ -29,8 +29,15 @@ export default function RevisionPage() {
             .catch(() => setLoading(false));
     }, [router]);
 
+    const [analyzing, setAnalyzing] = useState(false);
+
     const handleSubmit = async () => {
         setSubmitting(true);
+        setAnalyzing(true);
+
+        // FAKE DELAY for "IA Analysis"
+        await new Promise(r => setTimeout(r, 1500));
+
         try {
             const res = await fetch(`/api/session/${sessionId}/submit`, {
                 method: "POST",
@@ -39,31 +46,30 @@ export default function RevisionPage() {
                 router.push("/confirmacion");
             } else {
                 alert("Error al enviar. Inténtalo de nuevo.");
+                setAnalyzing(false);
             }
         } catch (e) {
             alert("Error de conexión.");
+            setAnalyzing(false);
         } finally {
             setSubmitting(false);
         }
     };
 
-    const getQuestionText = (id: string) => {
-        let q = questionsData.core.find((q: any) => q.id === id);
-        if (!q) {
-            for (const mod of questionsData.modules) {
-                q = mod.questions.find((q: any) => q.id === id);
-                if (q) break;
-            }
-        }
-        return q ? q.text : id;
-    };
+    // ...
 
-    const formatValue = (val: any) => {
-        if (Array.isArray(val)) return val.length > 0 ? val.join(", ") : "Ninguna";
-        if (typeof val === "boolean") return val ? "Sí" : "No";
-        if (!val) return "-";
-        return val;
-    };
+    if (analyzing) return (
+        <div className="min-h-screen bg-indigo-600 flex flex-col items-center justify-center text-white p-6 font-sans">
+            <div className="w-24 h-24 relative mb-8">
+                <div className="absolute inset-0 border-4 border-white/30 rounded-full animate-ping"></div>
+                <div className="absolute inset-2 border-4 border-white rounded-full flex items-center justify-center">
+                    <span className="text-3xl">🤖</span>
+                </div>
+            </div>
+            <h2 className="text-3xl font-bold mb-2 tracking-tight">Analizando respuestas...</h2>
+            <p className="text-indigo-200 text-lg">Calculando nivel de prioridad con IA</p>
+        </div>
+    );
 
     if (loading) return <div className="page-container justify-center text-center">Cargando revisión...</div>;
 

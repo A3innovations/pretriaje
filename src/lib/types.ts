@@ -37,6 +37,19 @@ export type Session = {
 
     // Answers map
     answers: Record<string, any>; // question_id -> value
+
+    // AI Triage Data
+    triage?: TriageAnalysis;
+};
+
+export type TriageLevel = 'verde' | 'ambar' | 'rojo';
+
+export type TriageAnalysis = {
+    score: number;
+    level: TriageLevel;
+    reasons: string[];
+    aiSummary: string;
+    aiQuestions: string[];
 };
 
 export type Answer = {
