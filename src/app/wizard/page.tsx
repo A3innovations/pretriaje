@@ -32,7 +32,28 @@ export default function WizardPage() {
         fetch(`/api/session/${sid}`)
             .then(res => res.json())
             .then(data => {
-                if (data.answers) setAnswers(data.answers);
+                let initialAnswers = data.answers || {};
+
+                // Auto-calculate age usage logic if DOB exists
+                if (data.dob && !initialAnswers.q_age) {
+                    const birth = new Date(data.dob);
+                    const today = new Date();
+                    let age = today.getFullYear() - birth.getFullYear();
+                    const m = today.getMonth() - birth.getMonth();
+                    if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) {
+                        age--;
+                    }
+
+                    // Map to existing ranges for compatibility
+                    let ageRange = "18-30";
+                    if (age > 60) ageRange = "+60";
+                    else if (age > 45) ageRange = "46-60";
+                    else if (age > 30) ageRange = "31-45";
+
+                    initialAnswers = { ...initialAnswers, q_age: ageRange };
+                }
+
+                setAnswers(initialAnswers);
                 setLoading(false);
             })
             .catch(() => setLoading(false));

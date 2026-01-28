@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, Suspense, useRef } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import {
     LayoutGrid, Users, Settings, FileText, Bell, Search,
-    Filter, ChevronDown, CheckCircle, Clock, AlertTriangle, Activity, Brain, X, RefreshCw
+    Filter, ChevronDown, CheckCircle, Clock, AlertTriangle, Activity, Brain, X, RefreshCw,
+    ArrowRight
 } from "lucide-react";
 import { Session } from "@/lib/types";
 
@@ -22,6 +23,7 @@ function PanelContent() {
     // Insights Modal State
     const [insightsSession, setInsightsSession] = useState<Session | null>(null);
     const [regenerating, setRegenerating] = useState(false);
+    const [displayedSummary, setDisplayedSummary] = useState("");
     const [selectedQuestions, setSelectedQuestions] = useState<Record<string, boolean>>({});
 
     const fetchSessions = async () => {
@@ -30,7 +32,6 @@ function PanelContent() {
             const data = await res.json();
 
             // Sort: High Priority (red) first, then Media, then Normal. Then by Date.
-            // Priority: Score >= 70 OR Level=ROJO (High), Score >= 40 (Med), Else (Normal)
             const sorted = data.sort((a: Session, b: Session) => {
                 const getPrio = (s: Session) => {
                     const score = s.triage?.score ?? s.red_flag_score ?? 0;
@@ -59,12 +60,42 @@ function PanelContent() {
         fetchSessions();
     };
 
+    // Typewriter effect helper
+    const typeWriterRef = useRef<NodeJS.Timeout | null>(null);
+
+    const startTypewriter = (text: string) => {
+        setDisplayedSummary("");
+        if (typeWriterRef.current) clearInterval(typeWriterRef.current);
+
+        let i = 0;
+        typeWriterRef.current = setInterval(() => {
+            setDisplayedSummary(text.slice(0, i + 1));
+            i++;
+            if (i >= text.length) {
+                if (typeWriterRef.current) clearInterval(typeWriterRef.current);
+            }
+        }, 15); // Speed of typing
+    };
+
+    // Watch for modal open to trigger typewriter first time
+    useEffect(() => {
+        if (insightsSession?.triage?.aiSummary) {
+            startTypewriter(insightsSession.triage.aiSummary);
+        }
+    }, [insightsSession]);
+
     const handleRegenerateIA = async () => {
+        if (!insightsSession?.triage?.aiSummary) return;
+
         setRegenerating(true);
-        await new Promise(r => setTimeout(r, 800)); // Fake visual delay
+        setDisplayedSummary(""); // Clear text
+
+        // Simulate "Processing" delay
+        await new Promise(r => setTimeout(r, 1200));
+
         setRegenerating(false);
-        // In a real app, this might call an API to re-run the LLM. 
-        // For now, it just shows the spinner to confirm "action taken".
+        // Start typing again
+        startTypewriter(insightsSession.triage.aiSummary);
     };
 
     const handleMarkReviewed = async () => {
@@ -77,11 +108,7 @@ function PanelContent() {
         setSessions(updated);
         setInsightsSession(null); // Close modal
 
-        // Persist (Dummy API call concept - assuming we have a reviewed endpoint or just generic update)
-        // Ideally: PATCH /api/session/[id] { reviewed: true }
-        // For now we rely on the state update or assume backend sync if implemented.
         try {
-            // We reuse the submit endpoint or a patch if available. For this demo, just console log.
             // Ideally implementing: await fetch(`/api/session/${insightsSession.id}/review`, { method: 'POST' });
             console.log("Marked as reviewed:", insightsSession.id);
         } catch (e) { console.error(e); }
@@ -116,7 +143,6 @@ function PanelContent() {
 
         // Filter Priority
         if (filterPriority !== "all") {
-            // Logic match with fetch sort
             if (filterPriority === "high") res = res.filter(s => (s.triage?.score ?? 0) >= 70);
             else if (filterPriority === "medium") res = res.filter(s => (s.triage?.score ?? 0) >= 40 && (s.triage?.score ?? 0) < 70);
             else if (filterPriority === "normal") res = res.filter(s => (s.triage?.score ?? 0) < 40);
@@ -126,16 +152,14 @@ function PanelContent() {
     }, [sessions, searchTerm, filterPriority]);
 
     const getPriorityBadge = (score: number, level?: string) => {
-        // Use strict thresholds: >= 70 Red, >= 40 Amber, Else Green
         const isRed = score >= 70 || level === 'rojo';
-        const isAmber = !isRed && (score >= 40 || level === 'ambar');
+        const isAmber = !isRed && (score >= 40 || level === 'amber');
 
         if (isRed) return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-100/80 text-red-700 border border-red-200">ALTA</span>;
         if (isAmber) return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100/80 text-amber-700 border border-amber-200">MEDIA</span>;
         return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-green-100/80 text-green-700 border border-green-200">NORMAL</span>;
     };
 
-    // Helper to get full name
     const getPatientName = (s: Session) => {
         if (s.worker_firstname || s.worker_lastname) {
             return `${s.worker_firstname || ""} ${s.worker_lastname || ""}`.trim();
@@ -210,9 +234,6 @@ function PanelContent() {
                         </select>
                         <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={14} />
                     </div>
-                    <div className="md:col-span-4 flex justify-end">
-                        {/* Placeholder for "Hide Reviewed" toggle if implemented later */}
-                    </div>
                 </div>
 
                 {/* Data Table */}
@@ -249,7 +270,6 @@ function PanelContent() {
                                         <td className="px-6 py-4 font-mono font-bold text-slate-700 align-top">{s.worker_id}</td>
                                         <td className="px-6 py-4 align-top">
                                             <div className="font-bold text-slate-900">{getPatientName(s)}</div>
-                                            {/* AI Reason Chips */}
                                             <div className="flex flex-wrap gap-1 mt-1.5">
                                                 {s.triage?.reasons?.slice(0, 2).map((r, i) => (
                                                     <span key={i} className="inline-flex px-1.5 py-0.5 rounded text-[10px] font-medium bg-slate-100 text-slate-600 border border-slate-200">
@@ -293,9 +313,9 @@ function PanelContent() {
                                                 </button>
                                                 <button
                                                     onClick={() => router.push(`/panel/report/${s.id}`)}
-                                                    className="text-slate-400 hover:text-indigo-600 text-xs font-medium hover:underline"
+                                                    className="flex items-center gap-1 text-slate-400 hover:text-indigo-600 text-xs font-bold hover:underline transition-colors mt-1"
                                                 >
-                                                    Ver informe completo
+                                                    Informe <ArrowRight size={12} />
                                                 </button>
                                             </div>
                                         </td>
@@ -307,106 +327,139 @@ function PanelContent() {
                 </div>
             </main>
 
-            {/* IA INSIGHTS MODAL */}
+            {/* IA INSIGHTS MODAL WITH CYBER TRANSITION */}
             {insightsSession && (
                 <div className="fixed inset-0 z-50 flex justify-end">
-                    <div className="absolute inset-0 bg-black/20 backdrop-blur-sm" onClick={() => setInsightsSession(null)} />
-                    <div className="relative w-full max-w-md bg-white shadow-2xl h-full p-6 overflow-y-auto border-l border-slate-200 anim-enter-slide-left">
-                        <div className="flex justify-between items-center mb-6">
-                            <div className="flex items-center gap-2 text-indigo-700">
-                                <Brain size={24} />
-                                <h2 className="text-xl font-bold">IA Insights</h2>
+                    <div className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-all duration-300" onClick={() => setInsightsSession(null)} />
+
+                    {/* Panel Slide In - "Cyber" Effect (Simple CSS animation class presumed or inline style) */}
+                    <div className="relative w-full max-w-md bg-white shadow-2xl h-full flex flex-col overflow-hidden border-l border-indigo-100 transform transition-all animate-slide-in-right">
+
+                        {/* Header with gradient */}
+                        <div className="px-6 py-5 border-b border-slate-100 bg-gradient-to-r from-white to-slate-50 flex justify-between items-center">
+                            <div className="flex items-center gap-3 text-indigo-700">
+                                <div className="p-2 bg-indigo-100 rounded-lg">
+                                    <Brain size={24} className="text-indigo-600" />
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold leading-none">IA Insights</h2>
+                                    <p className="text-[10px] uppercase tracking-widest text-indigo-400 font-bold mt-1">Análisis Predictivo</p>
+                                </div>
                             </div>
-                            <button onClick={() => setInsightsSession(null)} className="p-2 hover:bg-slate-100 rounded-full text-slate-500">
+                            <button onClick={() => setInsightsSession(null)} className="p-2 hover:bg-red-50 hover:text-red-500 rounded-full text-slate-400 transition-colors">
                                 <X size={20} />
                             </button>
                         </div>
 
                         {/* Valid Triage Data check */}
                         {insightsSession.triage ? (
-                            <div className="space-y-6">
-                                {/* Score Block */}
-                                <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100 flex flex-col items-center justify-center text-center">
-                                    <div className="text-5xl font-extrabold text-slate-800 mb-2">
+                            <div className="flex-1 overflow-y-auto p-6 space-y-8 bg-slate-50/50">
+
+                                {/* Score Block - Prominent */}
+                                <div className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 flex flex-col items-center justify-center text-center relative overflow-hidden">
+                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                                    <div className="text-6xl font-black text-slate-800 mb-1 tracking-tighter">
                                         {insightsSession.triage.score}
-                                        <span className="text-xl text-slate-400 font-normal">/100</span>
+                                        <span className="text-2xl text-slate-300 font-light ml-1">/100</span>
                                     </div>
-                                    <div className="mb-4">
+                                    <div className="mb-4 transform scale-110">
                                         {getPriorityBadge(insightsSession.triage.score, insightsSession.triage.level)}
                                     </div>
-                                    <p className="text-sm text-slate-500 leading-snug">
-                                        Calculado basado en {Object.keys(insightsSession.answers).length} respuestas y patrones de riesgo.
+                                    <p className="text-xs font-medium text-slate-500 uppercase tracking-wide">
+                                        Nivel de Riesgo Calculado
                                     </p>
                                 </div>
 
-                                {/* Summary */}
+                                {/* Summary with Typewriter Effect */}
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Resumen Clínico Generativo</h3>
-                                    <div className={`p-4 rounded-xl text-sm leading-relaxed border ${insightsSession.triage.level === 'rojo' ? 'bg-red-50 text-red-900 border-red-100' : 'bg-indigo-50 text-indigo-900 border-indigo-100'}`}>
-                                        {insightsSession.triage.aiSummary}
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Resumen Clínico</h3>
+                                    <div className={`p-5 rounded-2xl text-sm leading-relaxed border shadow-sm relative transition-all ${insightsSession.triage.level === 'rojo' ? 'bg-red-50/50 text-slate-800 border-red-100' : 'bg-white text-slate-700 border-indigo-100'}`}>
+                                        <span className="block min-h-[60px]">
+                                            {displayedSummary}
+                                            {regenerating && <span className="inline-block w-2 H-4 bg-indigo-500 animate-pulse ml-1">|</span>}
+                                        </span>
+                                        {/* "AI" watermark */}
+                                        <Activity className="absolute bottom-3 right-3 text-indigo-100 opacity-50" size={40} />
                                     </div>
                                 </div>
 
                                 {/* Reasons */}
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Factores Clave</h3>
-                                    <ul className="space-y-2">
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Factores Clave</h3>
+                                    <ul className="space-y-3">
                                         {insightsSession.triage.reasons.length > 0 ? (
                                             insightsSession.triage.reasons.map((r, i) => (
-                                                <li key={i} className="flex items-start gap-2 text-sm text-slate-700 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                                                    <AlertTriangle size={16} className="text-amber-500 mt-0.5 shrink-0" />
+                                                <li key={i} className="flex items-center gap-3 text-sm font-medium text-slate-700 bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition-colors">
+                                                    <div className="w-8 h-8 rounded-full bg-amber-50 flex items-center justify-center shrink-0">
+                                                        <AlertTriangle size={16} className="text-amber-500" />
+                                                    </div>
                                                     <span>{r}</span>
                                                 </li>
                                             ))
                                         ) : (
-                                            <li className="text-slate-400 italic text-sm">No se detectaron factores de riesgo específicos.</li>
+                                            <li className="text-slate-400 italic text-sm text-center py-2">No se detectaron factores de riesgo específicos.</li>
                                         )}
                                     </ul>
                                 </div>
 
-                                {/* Suggested Questions (Interactive) */}
+                                {/* Suggested Questions */}
                                 <div>
-                                    <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider mb-2">Preguntas Sugeridas</h3>
+                                    <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3 pl-1">Preguntas Sugeridas</h3>
                                     <div className="space-y-2">
                                         {insightsSession.triage.aiQuestions.map((q, i) => (
-                                            <label key={i} className={`flex gap-3 items-start p-3 rounded-lg cursor-pointer border transition-colors ${selectedQuestions[q] ? 'bg-indigo-50 border-indigo-200' : 'bg-transparent border-transparent hover:border-slate-200 hover:bg-slate-50'}`}>
+                                            <label key={i} className={`flex gap-3 items-start p-3 rounded-xl cursor-pointer border-2 transition-all ${selectedQuestions[q] ? 'bg-indigo-50 border-indigo-500 shadow-sm' : 'bg-white border-transparent hover:border-slate-200'}`}>
+                                                <div className={`mt-0.5 w-5 h-5 rounded border flex items-center justify-center transition-colors ${selectedQuestions[q] ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-slate-50'}`}>
+                                                    {selectedQuestions[q] && <CheckCircle size={12} className="text-white" />}
+                                                </div>
+                                                <span className={`text-sm ${selectedQuestions[q] ? 'text-indigo-900 font-bold' : 'text-slate-600'}`}>{q}</span>
+                                                {/* Hidden real checkbox */}
                                                 <input
                                                     type="checkbox"
                                                     checked={!!selectedQuestions[q]}
                                                     onChange={() => toggleQuestion(q)}
-                                                    className="mt-1 w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500 accent-indigo-600"
+                                                    className="hidden"
                                                 />
-                                                <span className={`text-sm ${selectedQuestions[q] ? 'text-indigo-900 font-medium' : 'text-slate-700'}`}>{q}</span>
                                             </label>
                                         ))}
                                     </div>
                                 </div>
-
-                                {/* Actions */}
-                                <div className="pt-6 border-t border-slate-100 flex gap-3">
-                                    <button
-                                        onClick={handleRegenerateIA}
-                                        disabled={regenerating}
-                                        className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold text-sm hover:bg-slate-50 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                    >
-                                        <RefreshCw size={18} className={regenerating ? "animate-spin" : ""} />
-                                        {regenerating ? "Regenerando..." : "Regenerar"}
-                                    </button>
-                                    <button
-                                        onClick={handleMarkReviewed}
-                                        className="flex-1 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm shadow-lg shadow-indigo-200 flex items-center justify-center gap-2 active:scale-95 transition-all"
-                                    >
-                                        <CheckCircle size={18} />
-                                        Marcar Revisado
-                                    </button>
-                                </div>
                             </div>
                         ) : (
-                            <div className="text-center py-12 text-slate-400">
-                                <Brain size={48} className="mx-auto mb-4 opacity-20" />
-                                <p>Datos de IA no disponibles para esta sesión antigua.</p>
+                            <div className="flex-1 flex flex-col items-center justify-center p-12 text-slate-400">
+                                <Brain size={64} className="mb-4 opacity-10 text-indigo-500" />
+                                <p>Análisis no disponible.</p>
                             </div>
                         )}
+
+                        {/* Footer Actions */}
+                        <div className="p-6 bg-white border-t border-slate-100 flex flex-col gap-3 shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
+                            <button
+                                onClick={() => router.push(`/panel/report/${insightsSession.id}`)}
+                                className="w-full py-4 bg-slate-900 hover:bg-black text-white rounded-xl font-bold text-sm shadow-xl flex items-center justify-center gap-2 active:scale-[0.98] transition-all group"
+                            >
+                                <FileText size={18} className="text-indigo-400 group-hover:text-indigo-300" />
+                                VER INFORME COMPLETO
+                                <ArrowRight size={18} className="ml-auto opacity-50 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                            </button>
+
+                            <div className="flex gap-3">
+                                <button
+                                    onClick={handleRegenerateIA}
+                                    disabled={regenerating}
+                                    className="flex-1 py-3 border border-slate-200 rounded-xl text-slate-600 font-bold text-xs hover:bg-slate-50 flex items-center justify-center gap-2 active:scale-95 transition-all uppercase tracking-wide"
+                                >
+                                    <RefreshCw size={16} className={regenerating ? "animate-spin text-indigo-500" : ""} />
+                                    {regenerating ? "Analizando..." : "Regenerar"}
+                                </button>
+                                <button
+                                    onClick={handleMarkReviewed}
+                                    className="flex-1 py-3 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-xl font-bold text-xs shadow-sm border border-indigo-100 flex items-center justify-center gap-2 active:scale-95 transition-all uppercase tracking-wide"
+                                >
+                                    <CheckCircle size={16} />
+                                    Marcar Revisado
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}
