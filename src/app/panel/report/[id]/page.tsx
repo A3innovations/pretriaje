@@ -126,7 +126,7 @@ export default function ReportPage() {
                             <div>
                                 <h3 className="text-xl font-bold tracking-tight">Informe Revisado</h3>
                                 <p className="text-emerald-100 font-medium print:text-slate-500">
-                                    Validado por equipo médico el {session.reviewed_at ? new Date(session.reviewed_at).toLocaleDateString() : 'fecha pendiente'}.
+                                    Validado por equipo médico el {session.reviewed_at ? new Date(session.reviewed_at).toLocaleString() : 'fecha pendiente'}.
                                 </p>
                             </div>
                         </div>
