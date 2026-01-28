@@ -157,20 +157,7 @@ export default function AdminQRPage() {
                 {/* Right Side: Actions & Timer */}
                 <div className="flex-1 min-w-[320px] max-w-md bg-white p-8 lg:p-12 flex flex-col justify-between shadow-2xl z-10 relative">
 
-                    <div className="pt-4">
-                        <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-6 border-b border-slate-100 pb-4">Seguridad Dinámica</h3>
-                        <div className="text-center bg-slate-50 rounded-3xl p-8 border border-slate-100 mb-8 relative overflow-hidden">
-                            {/* Progress Bar Background */}
-                            <div className="absolute bottom-0 left-0 h-1 bg-indigo-500 transition-all duration-100 ease-linear" style={{ width: `${progress}%` }}></div>
 
-                            <div className="text-5xl font-mono font-bold tracking-tight tabular-nums mb-2 text-slate-900">
-                                {expiresIn}
-                            </div>
-                            <span className="text-xs font-bold uppercase tracking-wide px-3 py-1 rounded-full bg-indigo-100 text-indigo-600">
-                                Próxima actualización
-                            </span>
-                        </div>
-                    </div>
 
                     <div className="space-y-4">
                         <h3 className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Acciones</h3>
