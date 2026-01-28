@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { Session } from "@/lib/types";
 import {
     Printer, ArrowLeft, AlertTriangle, FileText, CheckCircle,
-    Clock, Activity, Check, User
+    Clock, Activity, Check, User, Brain
 } from "lucide-react";
 import questionsData from "@/lib/questions.json";
 
@@ -126,13 +126,38 @@ export default function ReportPage() {
                             <div>
                                 <h3 className="text-xl font-bold tracking-tight">Informe Revisado</h3>
                                 <p className="text-emerald-100 font-medium print:text-slate-500">
-                                    Validado por equipo médico el {session.reviewed_at ? new Date(session.reviewed_at).toLocaleString() : 'fecha pendiente'}.
+                                    {(session.reviewed_at || isReviewed)
+                                        ? `Validado por equipo médico el ${new Date(session.reviewed_at || new Date().toISOString()).toLocaleString()}`
+                                        : 'Validado por equipo médico'}
                                 </p>
                             </div>
                         </div>
-                        {/* <div className="hidden md:block opacity-80 font-mono text-sm tracking-widest border border-white/30 px-3 py-1 rounded">
-                            STATUS: OK
-                        </div> */}
+                    </div>
+                )}
+
+                {/* AI INTERVIEW SECTION - ADDED */}
+                {(session.ai_interactions && session.ai_interactions.length > 0) && (
+                    <div className="mb-8 bg-white rounded-xl shadow-sm border border-slate-200 p-6 break-inside-avoid print:shadow-none print:border print:border-slate-300">
+                        <div className="flex items-center gap-2 mb-6 border-b border-slate-100 pb-4 print:border-slate-300">
+                            <Brain className="text-indigo-600 print:text-black" size={20} />
+                            <h2 className="text-sm font-bold text-slate-900 uppercase tracking-widest print:text-black">Entrevista Clínica Asistida por IA</h2>
+                        </div>
+
+                        <div className="space-y-4">
+                            {session.ai_interactions.map((inter: any, i: number) => (
+                                <div key={i} className="bg-gradient-to-r from-slate-50 to-white border border-slate-100 rounded-xl p-4 print:bg-white print:border-slate-300">
+                                    <p className="text-sm text-slate-500 font-bold mb-2 print:text-black">
+                                        <span className="text-indigo-400 mr-2 print:text-black">P:</span>
+                                        {inter.question}
+                                    </p>
+                                    <div className="pl-6 border-l-2 border-indigo-100 print:border-slate-400">
+                                        <p className="text-base text-slate-800 font-medium print:text-black">
+                                            {inter.answer}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 )}
 
