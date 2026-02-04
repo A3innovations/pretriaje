@@ -232,7 +232,28 @@ export default function WizardPage() {
                         <QuestionRenderer
                             question={currentQuestion}
                             value={answers[currentQuestion.id]}
-                            onChange={handleAnswerChange}
+                            onChange={(val) => {
+                                // Special Reset Logic
+                                if (currentQuestion.id === 'q_role') {
+                                    // Reset all symptom questions and 'other' descriptions if role changes
+                                    const nextAnswers = { ...answers, [currentQuestion.id]: val };
+
+                                    // Remove keys starting with q_symptoms_ or matching q_role_other
+                                    Object.keys(nextAnswers).forEach(key => {
+                                        if (key.startsWith('q_symptoms_') || key === 'q_role_other') {
+                                            delete nextAnswers[key];
+                                        }
+                                    });
+
+                                    setAnswers(nextAnswers);
+                                } else {
+                                    handleAnswerChange(val);
+                                }
+                            }}
+                            otherValue={answers[currentQuestion.id + '_other']}
+                            onOtherChange={(val) => {
+                                setAnswers(prev => ({ ...prev, [currentQuestion.id + '_other']: val }));
+                            }}
                         />
                     </div>
 

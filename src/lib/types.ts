@@ -93,6 +93,7 @@ export type Question = {
     text: string;
     options?: string[];
     other?: boolean;
+    hasOther?: boolean;
     required?: boolean;
     placeholder?: string;
     maxChars?: number;

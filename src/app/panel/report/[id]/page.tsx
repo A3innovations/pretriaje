@@ -200,14 +200,27 @@ export default function ReportPage() {
                             <Activity size={16} className="text-indigo-500 print:text-black" /> Datos Generales
                         </div>
                         <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-6">
-                            {questionsData.core.filter((q: any) => session.answers?.[q.id]).map((q: any) => (
-                                <div key={q.id} className="border-b border-slate-100 pb-2 last:border-0 print:border-slate-300">
-                                    <dt className="text-xs font-bold text-slate-500 uppercase mb-1 print:text-black">{q.text}</dt>
-                                    <dd className="text-slate-900 font-medium text-lg print:text-black">
-                                        {Array.isArray(session.answers[q.id]) ? session.answers[q.id].join(", ") : String(session.answers[q.id])}
-                                    </dd>
-                                </div>
-                            ))}
+                            {questionsData.core.filter((q: any) => session.answers?.[q.id]).map((q: any) => {
+                                const answer = session.answers[q.id];
+                                const otherText = session.answers[q.id + '_other'];
+
+                                // Format value
+                                let displayValue = Array.isArray(answer) ? answer.join(", ") : String(answer);
+
+                                // Append "Other" text if present
+                                if (otherText) {
+                                    displayValue += ` (Otro: ${otherText})`;
+                                }
+
+                                return (
+                                    <div key={q.id} className="border-b border-slate-100 pb-2 last:border-0 print:border-slate-300">
+                                        <dt className="text-xs font-bold text-slate-500 uppercase mb-1 print:text-black">{q.text}</dt>
+                                        <dd className="text-slate-900 font-medium text-lg print:text-black">
+                                            {displayValue}
+                                        </dd>
+                                    </div>
+                                );
+                            })}
                         </div>
                     </section>
 
