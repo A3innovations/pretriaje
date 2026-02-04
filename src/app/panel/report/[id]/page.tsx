@@ -77,7 +77,7 @@ export default function ReportPage() {
                     <div>
                         <div className="flex items-center gap-3 mb-2">
                             <h1 className="text-3xl font-bold text-slate-900 tracking-tight leading-none print:text-4xl">
-                                {session.answers?.['firstname'] || session.answers?.['name'] || "Paciente Sin Nombre"}
+                                {session.worker_firstname ? `${session.worker_firstname} ${session.worker_lastname || ''}` : (session.answers?.['firstname'] || session.answers?.['name'] || "Paciente Sin Nombre")}
                             </h1>
                             <div className="print:hidden">{priorityBadge}</div>
                         </div>

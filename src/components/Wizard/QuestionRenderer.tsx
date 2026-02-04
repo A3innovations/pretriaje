@@ -54,7 +54,7 @@ export default function QuestionRenderer({ question, value, onChange, onNext, ot
         if (next.includes(option)) {
             next = next.filter((v: string) => v !== option);
             // If checking off "Otro", clear the text?
-            if (option === "Otro" && onOtherChange) onOtherChange("");
+            if ((option === "Otro" || option === "Otro:") && onOtherChange) onOtherChange("");
         } else {
             next = [...next, option];
         }
@@ -111,7 +111,7 @@ export default function QuestionRenderer({ question, value, onChange, onNext, ot
             <div className="stack anim-enter">
                 {question.options?.map((opt) => {
                     const selected = isSelected(opt);
-                    const isOtherOption = opt === "Otro";
+                    const isOtherOption = opt === "Otro" || opt === "Otro:";
 
                     return (
                         <div key={opt}>
