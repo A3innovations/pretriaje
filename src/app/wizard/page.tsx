@@ -236,7 +236,7 @@ export default function WizardPage() {
                                 // Special Reset Logic
                                 if (currentQuestion.id === 'q_role') {
                                     // Reset all symptom questions and 'other' descriptions if role changes
-                                    const nextAnswers = { ...answers, [currentQuestion.id]: val };
+                                    const nextAnswers: Record<string, any> = { ...answers, [currentQuestion.id]: val };
 
                                     // Remove keys starting with q_symptoms_ or matching q_role_other
                                     Object.keys(nextAnswers).forEach(key => {
