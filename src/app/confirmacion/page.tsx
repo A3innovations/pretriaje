@@ -113,6 +113,77 @@ export default function ConfirmationPage() {
             yPos += 8;
         };
 
+        // Helpers
+        // Helper to check for risks/red flags
+        const checkRisk = (id: string, val: string) => {
+            const v = val.toLowerCase();
+            if (id === 'qc_1_noise_prot') return v === 'nunca' || v === 'no aplica' || v === 'no';
+            if (id === 'qe_3_bio_vac_hep' || id === 'qe_3_bio_vac_tet') return v === 'no' || v === 'incompleta';
+            if (v.startsWith('sí') || v.startsWith('si')) return true;
+            if (v.startsWith('frecuente')) return true;
+            if (v.startsWith('a veces') && (id.includes('dizzyness') || id.includes('seizure') || id.includes('vertigo'))) return true;
+            return false;
+        };
+
+        // Helper to draw a row with robust height calculation
+        const printRow = (label: string, value: string, isLast = false, isRisk = false) => {
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+
+            const col1X = margin;
+            const col1W = 90;
+            const col2X = margin + 95;
+            const col2W = 80;
+
+            const labelLines = doc.splitTextToSize(label, col1W);
+            const labelHeight = labelLines.length * 5;
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+
+            if (isRisk) {
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(220, 38, 38);
+            } else {
+                doc.setTextColor(15, 23, 42);
+            }
+
+            const valLines = doc.splitTextToSize(value, col2W);
+            const valHeight = valLines.length * 5;
+
+            const rowHeight = Math.max(labelHeight, valHeight) + 8;
+
+            if (yPos + rowHeight > 260) {
+                doc.addPage();
+                yPos = 30;
+            }
+
+            // Label
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(100, 116, 139);
+            doc.text(labelLines, col1X, yPos + 4);
+
+            // Value
+            if (isRisk) {
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(220, 38, 38);
+            } else {
+                doc.setFont("helvetica", "normal");
+                doc.setTextColor(15, 23, 42);
+            }
+            doc.text(valLines, col2X, yPos + 4);
+
+            // Divider
+            if (!isLast) {
+                doc.setDrawColor(241, 245, 249);
+                doc.line(col1X, yPos + rowHeight - 2, 210 - margin, yPos + rowHeight - 2);
+            }
+
+            yPos += rowHeight;
+        };
+
         // --- SECTION: CORE & MODULES ---
         renderSectionHeader("HISTORIAL Y DATOS GENERALES");
 
