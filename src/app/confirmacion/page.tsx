@@ -127,70 +127,77 @@ export default function ConfirmationPage() {
 
         // Helper to draw a row with robust height calculation
         const printRow = (label: string, value: string, isLast = false, isRisk = false) => {
+            // STACKED LAYOUT: Label on top, Value below.
+            const maxWidth = 170; // Use full width minus margins
+
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
+            doc.setFontSize(10);
             doc.setTextColor(100, 116, 139);
 
-            const col1X = margin;
-            const col1W = 90;
-            const col2X = margin + 95;
-            const col2W = 80;
-
-            const labelLines = doc.splitTextToSize(label, col1W);
+            const labelLines = doc.splitTextToSize(label, maxWidth);
             const labelHeight = labelLines.length * 5;
 
+            // Calculate Value Height
             doc.setFont("helvetica", "normal");
-            doc.setFontSize(10);
+            doc.setFontSize(11); // Slightly bigger for value
+            const valLines = doc.splitTextToSize(value, maxWidth);
+            const valHeight = valLines.length * 6;
 
-            if (isRisk) {
-                doc.setFont("helvetica", "bold");
-                doc.setTextColor(220, 38, 38);
-            } else {
-                doc.setTextColor(15, 23, 42);
-            }
+            const totalHeight = labelHeight + valHeight + 10; // Padding
 
-            const valLines = doc.splitTextToSize(value, col2W);
-            const valHeight = valLines.length * 5;
-
-            const rowHeight = Math.max(labelHeight, valHeight) + 8;
-
-            if (yPos + rowHeight > 260) {
+            // Page Break Check
+            if (yPos + totalHeight > 260) {
                 doc.addPage();
                 yPos = 30;
             }
 
-            // Label
+            // Draw Label
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
-            doc.setTextColor(100, 116, 139);
-            doc.text(labelLines, col1X, yPos + 4);
+            doc.setFontSize(10);
+            doc.setTextColor(71, 85, 105); // Slate 600
+            doc.text(labelLines, margin, yPos + 4);
 
-            // Value
+            yPos += labelHeight + 2; // Move down for value
+
+            // Draw Value
             if (isRisk) {
                 doc.setFont("helvetica", "bold");
                 doc.setTextColor(220, 38, 38);
             } else {
                 doc.setFont("helvetica", "normal");
-                doc.setTextColor(15, 23, 42);
+                doc.setTextColor(15, 23, 42); // Black/Dark Slate
             }
-            doc.text(valLines, col2X, yPos + 4);
+            doc.text(valLines, margin, yPos + 4);
+
+            yPos += valHeight + 4; // Padding before line
 
             // Divider
             if (!isLast) {
                 doc.setDrawColor(241, 245, 249);
-                doc.line(col1X, yPos + rowHeight - 2, 210 - margin, yPos + rowHeight - 2);
+                doc.line(margin, yPos, 210 - margin, yPos);
+                yPos += 4; // Margin after line
             }
-
-            yPos += rowHeight;
         };
 
         // --- SECTION: CORE & MODULES ---
         renderSectionHeader("HISTORIAL Y DATOS GENERALES");
 
-        // Helper to strip emojis for PDF (Helvetica doesn't support them)
+        // Helper to strip emojis for PDF
         const cleanText = (text: string) => {
-            return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F100}-\u{1F1FF}\u{FE0F}]/gu, '')
-                .trim();
+            let t = text;
+            // Manual overrides for specific emojis to text
+            t = t.replace(/1️⃣/g, "1. ");
+            t = t.replace(/2️⃣/g, "2. ");
+            t = t.replace(/3️⃣/g, "3. ");
+            t = t.replace(/4️⃣/g, "4. ");
+            t = t.replace(/5️⃣/g, "5. ");
+            t = t.replace(/6️⃣/g, "6. ");
+            t = t.replace(/7️⃣/g, "7. ");
+            t = t.replace(/8️⃣/g, "8. ");
+            t = t.replace(/9️⃣/g, "9. ");
+
+            // Remove other emojis/symbols
+            return t.replace(/[^\w\s.,;:?¿!¡/()\-áéíóúÁÉÍÓÚñÑ]/g, "").trim();
         };
 
         // 1. Datos Generales (Core)
