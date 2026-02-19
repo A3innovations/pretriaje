@@ -9,10 +9,8 @@ export async function DELETE(
         const { id } = await params;
         const success = db.deleteSession(id);
 
-        if (!success) {
-            return NextResponse.json({ error: "Session not found or could not be deleted" }, { status: 404 });
-        }
-
+        // Idempotency: If not found, considered deleted.
+        // This handles Vercel's serverless nature where a delete request might hit a fresh instance.
         return NextResponse.json({ success: true });
     } catch (error) {
         console.error("Error deleting session:", error);
