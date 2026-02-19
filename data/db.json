@@ -1,0 +1,22 @@
+{
+  "campaigns": [
+    {
+      "id": "demo-campaign",
+      "company_name": "TechSolutions S.L.",
+      "unit_name": "Unidad Móvil MAD-01",
+      "location": "Polígono Alcobendas",
+      "doctor_emails": [
+        "medico@prevencion.com"
+      ],
+      "qr_token_current": "token123",
+      "qr_token_expires_at": "2026-02-20T12:28:55.803Z",
+      "settings": {
+        "allow_worker_copy": true,
+        "worker_copy_mode": "download",
+        "session_timeout_minutes": 15
+      }
+    }
+  ],
+  "sessions": [],
+  "reports": []
+}

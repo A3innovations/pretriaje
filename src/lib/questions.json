@@ -262,7 +262,7 @@
     },
     {
       "id": "q_pain_loc",
-      "type": "single",
+      "type": "multi",
       "text": "Localización del dolor",
       "showIf": {
         "question": "q_pain_level",
@@ -279,7 +279,7 @@
     },
     {
       "id": "q_pain_loc_8",
-      "type": "single",
+      "type": "multi",
       "text": "Localización del dolor",
       "showIf": {
         "question": "q_pain_level",
@@ -296,7 +296,7 @@
     },
     {
       "id": "q_pain_loc_9",
-      "type": "single",
+      "type": "multi",
       "text": "Localización del dolor",
       "showIf": {
         "question": "q_pain_level",
@@ -313,7 +313,7 @@
     },
     {
       "id": "q_pain_loc_10",
-      "type": "single",
+      "type": "multi",
       "text": "Localización del dolor",
       "showIf": {
         "question": "q_pain_level",
@@ -399,7 +399,7 @@
     },
     {
       "id": "q_exposure",
-      "type": "single",
+      "type": "multi",
       "text": "Exposición Principal en tu puesto",
       "options": [
         "Pantallas",

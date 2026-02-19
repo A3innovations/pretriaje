@@ -1,13 +1,60 @@
 import { Campaign, Report, Session } from './types';
+import fs from 'fs';
+import path from 'path';
 
-// Mock Data
+const DB_FILE_PATH = path.join(process.cwd(), 'data', 'db.json');
+
+// Ensure data directory exists
+const dataDir = path.dirname(DB_FILE_PATH);
+if (!fs.existsSync(dataDir)) {
+    fs.mkdirSync(dataDir, { recursive: true });
+}
+
+interface DBSchema {
+    campaigns: Campaign[];
+    sessions: Session[];
+    reports: Report[];
+}
+
 class InMemoryDB {
     private campaigns: Campaign[] = [];
     private sessions: Session[] = [];
     private reports: Report[] = [];
 
     constructor() {
-        this.seed();
+        this.load();
+        if (this.campaigns.length === 0) {
+            this.seed();
+            this.save();
+        }
+    }
+
+    private load() {
+        try {
+            if (fs.existsSync(DB_FILE_PATH)) {
+                const data = fs.readFileSync(DB_FILE_PATH, 'utf-8');
+                const parsed: DBSchema = JSON.parse(data);
+                this.campaigns = parsed.campaigns || [];
+                this.sessions = parsed.sessions || [];
+                this.reports = parsed.reports || [];
+                console.log(`[DB] Loaded ${this.sessions.length} sessions from disk.`);
+            }
+        } catch (error) {
+            console.error("[DB] Failed to load database:", error);
+        }
+    }
+
+    private save() {
+        try {
+            const data: DBSchema = {
+                campaigns: this.campaigns,
+                sessions: this.sessions,
+                reports: this.reports
+            };
+            fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2));
+        } catch (error) {
+            console.error("[DB] Failed to save database:", error);
+        }
     }
 
     private seed() {
@@ -36,6 +83,7 @@ class InMemoryDB {
         campaign.qr_token_current = newToken;
         // set 12h expiry
         campaign.qr_token_expires_at = new Date(Date.now() + 12 * 60 * 60 * 1000).toISOString();
+        this.save();
 
         return newToken;
     }
@@ -53,10 +101,14 @@ class InMemoryDB {
             answers: {}
         };
         this.sessions.push(session);
+        this.save();
         return session;
     }
 
     getSession(id: string): Session | undefined {
+        // Reload to ensure freshness in dev mode? 
+        // Ideally we only load on init, but in serverless/nextjs caching might be tricky.
+        // For this simple implementation, we rely on in-memory state being kept in the global singleton.
         return this.sessions.find(s => s.id === id);
     }
 
@@ -65,7 +117,18 @@ class InMemoryDB {
         if (idx === -1) return undefined;
 
         this.sessions[idx] = { ...this.sessions[idx], ...updates, last_activity_at: new Date().toISOString() };
+        this.save();
         return this.sessions[idx];
+    }
+
+    deleteSession(id: string): boolean {
+        const initialLength = this.sessions.length;
+        this.sessions = this.sessions.filter(s => s.id !== id);
+        if (this.sessions.length !== initialLength) {
+            this.save();
+            return true;
+        }
+        return false;
     }
 
     getSessionsByCampaign(campaignId: string) {
@@ -84,6 +147,7 @@ class InMemoryDB {
     // Reporting
     createReport(report: Report) {
         this.reports.push(report);
+        this.save();
     }
 
     getReports(campaignId: string) {

@@ -48,11 +48,11 @@ export default function IdentificationPage() {
         e.preventDefault();
         if (!sessionId) return;
 
-        // Validation: DNI / NIE Format
-        if (!isValidDNI(dni)) {
-            alert("El DNI o NIE introducido no es válido. Comprueba el formato y la letra.");
-            return;
-        }
+        // Validation: DNI / NIE Format - RELAXED per user request
+        // if (!isValidDNI(dni)) {
+        //     alert("El DNI o NIE introducido no es válido. Comprueba el formato y la letra.");
+        //     return;
+        // }
 
         // Validation: 18+
         if (dob) {

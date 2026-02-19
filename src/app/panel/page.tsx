@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import {
     LayoutGrid, Users, Settings, FileText, Bell, Search,
     Filter, ChevronDown, CheckCircle, Clock, AlertTriangle, Activity, Brain, X, RefreshCw,
-    ArrowRight, Save, MessageSquare, Edit2
+    ArrowRight, Save, MessageSquare, Edit2, Trash2
 } from "lucide-react";
 import { Session, AIInteraction } from "@/lib/types";
 import { EXTRA_QUESTIONS_POOL } from "@/lib/triage";
@@ -169,6 +169,22 @@ function PanelContent() {
         const updated = { ...insightsSession, reviewed: true, reviewed_at: new Date().toISOString() };
         setInsightsSession(null);
         await persistSessionUpdate(updated);
+    };
+
+    const handleDelete = async (id: string, name: string) => {
+        if (!confirm(`¿Estás seguro de que deseas eliminar el informe de ${name}?\nEsta acción no se puede deshacer.`)) return;
+
+        try {
+            const res = await fetch(`/api/session/${id}/delete`, { method: 'DELETE' });
+            if (res.ok) {
+                setSessions(prev => prev.filter(s => s.id !== id));
+            } else {
+                alert("Error al eliminar el informe.");
+            }
+        } catch (e) {
+            console.error("Error deleting session:", e);
+            alert("Error de conexión al eliminar.");
+        }
     };
 
     const toggleQuestionActive = (q: string) => {
@@ -417,9 +433,18 @@ function PanelContent() {
                                                 <button onClick={() => setInsightsSession(s)} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg text-xs font-bold transition-colors border border-indigo-100">
                                                     <Brain size={14} /> Ver IA
                                                 </button>
-                                                <button onClick={() => router.push(`/panel/report/${s.id}`)} className="flex items-center gap-1 text-slate-400 hover:text-indigo-600 text-xs font-bold hover:underline transition-colors mt-1">
-                                                    Informe <ArrowRight size={12} />
-                                                </button>
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <button onClick={() => router.push(`/panel/report/${s.id}`)} className="flex items-center gap-1 text-slate-400 hover:text-indigo-600 text-xs font-bold hover:underline transition-colors">
+                                                        Informe <ArrowRight size={12} />
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDelete(s.id, getPatientName(s))}
+                                                        className="p-1 text-slate-300 hover:text-red-500 transition-colors"
+                                                        title="Eliminar informe"
+                                                    >
+                                                        <Trash2 size={14} />
+                                                    </button>
+                                                </div>
                                             </div>
                                         </td>
                                     </tr>
