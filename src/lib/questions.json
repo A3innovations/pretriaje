@@ -221,7 +221,7 @@
     },
     {
       "id": "q_shift",
-      "type": "single",
+      "type": "multi",
       "text": "Turno actual",
       "options": [
         "Mañana",
