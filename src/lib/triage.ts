@@ -4,43 +4,49 @@ export function computeTriage(answers: Record<string, any>): TriageAnalysis {
     let score = 0;
     const reasons: string[] = [];
 
-    // --- 1. Scoring Logic ---
+    // --- 1. Scoring Logic (Risk Factors) ---
 
-    // Red Flags (q_red_flags)
-    // Assuming "q_red_flags" returns an array. If includes "Ninguna", no points.
-    const redFlags = answers["q_red_flags"];
-    const hasRedFlags = Array.isArray(redFlags) && !redFlags.includes("Ninguna") && redFlags.length > 0;
-
-    if (hasRedFlags) {
-        score += 50;
-        reasons.push("Bandera roja detectada");
-    }
-
-    // Happening Now (q_red_flags_now)
-    if (answers["q_red_flags_now"] === "Sí") {
-        score += 20;
-        // Don't push reason yet, maybe redundant with Red Flag?
-    }
-
-    // Pain (q_pain_level) - 0 to 10
-    const pain = parseInt(answers["q_pain_level"] || "0");
-    if (!isNaN(pain) && pain > 0) {
-        score += (pain * 3);
-        if (pain >= 5) reasons.push(`Dolor intenso (${pain}/10)`);
-        else reasons.push(`Dolor moderado (${pain}/10)`);
-    }
-
-    // Medication 24h (q_meds_today)
-    if (answers["q_meds_today"] === "Sí") {
-        score += 5;
-        reasons.push("Medicación recientes");
-    }
-
-    // Exposures (q_exposure)
-    const exposure = answers["q_exposure"];
-    if (["Maquinaria", "Conducción"].includes(exposure)) {
+    // 1. Family History
+    const family = answers["q_family_history"] || [];
+    if (Array.isArray(family) && !family.includes("Ninguno conocido") && !family.includes("No lo sabe")) {
         score += 10;
-        reasons.push(`Exposición de riesgo: ${exposure}`);
+        if (family.includes("Muerte súbita (<50 años)")) {
+            score += 20;
+            reasons.push("Antecedentes familiares de riesgo");
+        }
+    }
+
+    // 2. Personal History (High Risk)
+    const personal = answers["q_personal_history"] || [];
+    if (Array.isArray(personal) && !personal.includes("No")) {
+        score += 20;
+        if (personal.includes("Enfermedad cardiaca") || personal.includes("Enfermedad respiratoria")) {
+            score += 20;
+            reasons.push("Antecedentes personales de riesgo");
+        }
+    }
+
+    // 3. Vascular
+    const vascular = answers["q_vascular"] || [];
+    if (Array.isArray(vascular) && !vascular.includes("No")) {
+        score += 15;
+        reasons.push("Problemas vasculares");
+    }
+
+    // 4. Medication
+    const meds = answers["q_medication_habitual"] || [];
+    if (Array.isArray(meds) && !meds.includes("No")) {
+        score += 10;
+        if (meds.includes("Anticoagulantes") || meds.includes("Antihipertensivos")) {
+            score += 10;
+            reasons.push("Medicación crónica relevante");
+        }
+    }
+
+    // 5. Habits
+    const habits = answers["q_habits"] || [];
+    if (Array.isArray(habits) && !habits.includes("No")) {
+        score += 5;
     }
 
     // Clamp Score
@@ -48,46 +54,45 @@ export function computeTriage(answers: Record<string, any>): TriageAnalysis {
 
     // --- 2. Level Logic ---
     let level: TriageLevel = 'verde';
-    if (score >= 70 || (hasRedFlags && answers["q_red_flags_now"] === "Sí")) {
+    if (score >= 60) {
         level = 'rojo';
-    } else if (score >= 40) {
+    } else if (score >= 30) {
         level = 'ambar';
     }
 
     // --- 3. Summary Generation ---
     let aiSummary = "";
     if (level === 'verde') {
-        aiSummary = `Resumen IA: Dolor ${pain}/10. Sin banderas rojas activas. Revisión preventiva estándar recomendada.`;
+        aiSummary = `Resumen IA: Perfil de riesgo bajo. Sin antecedentes críticos inmediatos. Apto para revisión estándar.`;
     } else if (level === 'ambar') {
-        aiSummary = `Resumen IA: Puntuación media. ${hasRedFlags ? 'Bandera roja presente.' : ''} Requiere valoración de enfermería antes de aptitud.`;
+        aiSummary = `Resumen IA: Perfil de riesgo moderado. Antecedentes médicos o medicación crónica que requieren supervisión.`;
     } else {
-        aiSummary = `ALERTA IA: Síntomas prioritarios detectados. ${hasRedFlags ? 'Banderas rojas activas y actuales.' : ''} Se sugiere revisión médica inmediata.`;
+        aiSummary = `ALERTA IA: Perfil de riesgo elevado. Múltiples factores de salud detectados. Se recomienda revisión médica exhaustiva.`;
     }
 
     // --- 4. Question Suggestion ---
     const aiQuestions: string[] = [];
 
-    // Prioritize Red Flag / Pain questions
-    if (pain >= 7 || hasRedFlags) {
-        aiQuestions.push("¿El síntoma te impide realizar tareas básicas ahora mismo?");
-        aiQuestions.push("¿Has sentido este mismo síntoma con esta intensidad antes?");
+    if (personal.includes("Enfermedad cardiaca") || family.includes("Cardiopatías / Infarto / Ictus")) {
+        aiQuestions.push("¿Cuándo fue tu última revisión cardiológica completa?");
     }
 
-    // Meds / Drowsiness
-    if (answers["q_meds_today"] === "Sí") {
-        aiQuestions.push("¿Qué medicamento tomaste y a qué hora exacta?");
-        aiQuestions.push("¿Sientes somnolencia o lentitud de reflejos?");
+    if (meds.includes("Anticoagulantes")) {
+        aiQuestions.push("¿Llevas un control regular del INR o coagulación?");
     }
 
-    // Exposure
-    if (exposure && exposure !== "Ninguna") {
-        aiQuestions.push(`¿Tu tarea de ${exposure} requiere atención constante hoy?`);
+    if (habits.includes("Fumador/a")) {
+        aiQuestions.push("¿Cuántos cigarrillos consumes al día y desde hace cuánto?");
     }
 
-    // General History filler if needed
-    if (aiQuestions.length < 3) aiQuestions.push("¿Tienes antecedentes familiares relevantes?");
-    if (aiQuestions.length < 3) aiQuestions.push("¿Cuándo fue tu última revisión médica?");
-    if (aiQuestions.length < 3) aiQuestions.push("¿Hay algo más que debamos saber?");
+    if (answers["q_mental_health"] && !answers["q_mental_health"].includes("No")) {
+        aiQuestions.push("¿Te encuentras en tratamiento activo actualmente?");
+    }
+
+    // Fillers
+    if (aiQuestions.length < 3) aiQuestions.push("¿Hay algún otro síntoma reciente que te preocupe?");
+    if (aiQuestions.length < 3) aiQuestions.push("¿Tienes alguna alergia no diagnosticada?");
+    if (aiQuestions.length < 3) aiQuestions.push("¿Realizas actividad física regularmente?");
 
     return {
         score,

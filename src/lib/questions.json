@@ -42,184 +42,6 @@
       }
     },
     {
-      "id": "q_symptoms_office",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Trabajo de oficina / pantallas"
-      },
-      "options": [
-        "Dolor cervical o lumbar",
-        "Dolor de cabeza frecuente",
-        "Fatiga visual",
-        "Hormigueo en manos o muñecas",
-        "Sensación de estrés o sobrecarga mental",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_physical",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Trabajo físico / esfuerzo manual"
-      },
-      "options": [
-        "Dolor de espalda",
-        "Dolor en hombros o rodillas",
-        "Cansancio físico excesivo",
-        "Lesiones musculares repetidas",
-        "Limitación de movilidad",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_machine",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Trabajo con maquinaria / industria"
-      },
-      "options": [
-        "Dolor o pérdida de fuerza en extremidades",
-        "Hormigueos o entumecimiento",
-        "Zumbidos en los oídos",
-        "Mareos",
-        "Cortes o golpes frecuentes",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_driving",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Conducción"
-      },
-      "options": [
-        "Dolor lumbar",
-        "Dolor cervical",
-        "Somnolencia",
-        "Problemas de concentración",
-        "Molestias en piernas",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_public",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Atención al público"
-      },
-      "options": [
-        "Dolor de pies o piernas",
-        "Dolor lumbar",
-        "Cansancio general",
-        "Estrés o irritabilidad",
-        "Ronquera o molestias de garganta",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_health",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Sanidad / cuidados"
-      },
-      "options": [
-        "Dolor de espalda",
-        "Cansancio físico y mental",
-        "Estrés emocional",
-        "Trastornos del sueño",
-        "Dolor muscular generalizado",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_cleaning",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Limpieza / mantenimiento"
-      },
-      "options": [
-        "Dolor de espalda",
-        "Dolor en hombros",
-        "Irritación de piel o respiratoria",
-        "Cansancio físico",
-        "Dolor en muñecas",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_education",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Educación"
-      },
-      "options": [
-        "Ronquera o fatiga vocal",
-        "Dolor cervical o lumbar",
-        "Estrés o sobrecarga mental",
-        "Cansancio general",
-        "Dolor de cabeza frecuente",
-        "Otro:"
-      ]
-    },
-    {
-      "id": "q_symptoms_general",
-      "type": "multi",
-      "text": "¿Has tenido alguno de estos síntomas relacionados con tu trabajo?",
-      "required": false,
-      "hasOther": true,
-      "showIf": {
-        "question": "q_role",
-        "equals": "Otro puesto de trabajo"
-      },
-      "options": [
-        "Dolor muscular o articular generalizado",
-        "Cansancio o fatiga persistente",
-        "Dolor de cabeza frecuente",
-        "Mareos o sensación de inestabilidad",
-        "Dificultad para concentrarse",
-        "Trastornos del sueño",
-        "Estrés, ansiedad o irritabilidad",
-        "Hormigueos o entumecimiento",
-        "Falta de aire o sensación de opresión torácica",
-        "Molestias digestivas",
-        "Problemas de visión o audición",
-        "Irritación de piel o mucosas",
-        "Otro:"
-      ]
-    },
-    {
       "id": "q_shift",
       "type": "multi",
       "text": "Turno actual",
@@ -231,184 +53,128 @@
       ]
     },
     {
-      "id": "q_fit_now",
-      "type": "single",
-      "text": "¿Te sientes apto para trabajar ahora mismo?",
-      "required": true,
+      "id": "q_family_history",
+      "type": "multi",
+      "text": "1️⃣ Antecedentes familiares: ¿Tiene antecedentes familiares de enfermedades importantes?",
       "options": [
-        "Sí",
+        "Ninguno conocido",
+        "Cardiopatías / Infarto / Ictus",
+        "Diabetes",
+        "Cáncer",
+        "Muerte súbita (<50 años)",
+        "Enfermedad neurológica",
+        "Otros",
+        "No lo sabe"
+      ]
+    },
+    {
+      "id": "q_personal_history",
+      "type": "multi",
+      "text": "2️⃣ Enfermedades personales: ¿Padece o ha padecido alguna enfermedad relevante?",
+      "options": [
         "No",
-        "No estoy seguro"
+        "Hipertensión",
+        "Diabetes",
+        "Enfermedad cardiaca",
+        "Enfermedad respiratoria",
+        "Enfermedad autoinmune",
+        "Trastorno psicológico",
+        "Otros"
       ]
     },
     {
-      "id": "q_pain_level",
-      "type": "single",
-      "text": "Nivel de dolor actual (0-10)",
-      "required": true,
-      "options": [
-        "0",
-        "1",
-        "2",
-        "3",
-        "4",
-        "5",
-        "6",
-        "7",
-        "8",
-        "9",
-        "10"
-      ]
-    },
-    {
-      "id": "q_pain_loc",
+      "id": "q_surgeries",
       "type": "multi",
-      "text": "Localización del dolor",
-      "showIf": {
-        "question": "q_pain_level",
-        "equals": "7"
-      },
+      "text": "3️⃣ Cirugías / ingresos: ¿Ha sido operado o ingresado alguna vez?",
       "options": [
-        "Cabeza",
-        "Pecho",
-        "Abdomen",
-        "Espalda",
-        "Extremidades",
-        "Otro"
+        "No",
+        "Sí, cirugía menor",
+        "Sí, cirugía mayor",
+        "Sí, ingreso hospitalario sin cirugía",
+        "Otros"
       ]
     },
     {
-      "id": "q_pain_loc_8",
+      "id": "q_medication_habitual",
       "type": "multi",
-      "text": "Localización del dolor",
-      "showIf": {
-        "question": "q_pain_level",
-        "equals": "8"
-      },
+      "text": "4️⃣ Medicación actual: ¿Toma medicación de forma habitual?",
       "options": [
-        "Cabeza",
-        "Pecho",
-        "Abdomen",
-        "Espalda",
-        "Extremidades",
-        "Otro"
+        "No",
+        "Antihipertensivos",
+        "Anticoagulantes",
+        "Antidepresivos / Ansiolíticos",
+        "Anticonceptivos hormonales",
+        "Suplementos",
+        "Otros"
       ]
     },
     {
-      "id": "q_pain_loc_9",
+      "id": "q_allergies_known",
       "type": "multi",
-      "text": "Localización del dolor",
-      "showIf": {
-        "question": "q_pain_level",
-        "equals": "9"
-      },
+      "text": "5️⃣ Alergias: ¿Tiene alergias conocidas?",
       "options": [
-        "Cabeza",
-        "Pecho",
-        "Abdomen",
-        "Espalda",
-        "Extremidades",
-        "Otro"
+        "No",
+        "Medicamentos",
+        "Alimentos",
+        "Anestesia",
+        "Otros"
       ]
     },
     {
-      "id": "q_pain_loc_10",
+      "id": "q_vascular",
       "type": "multi",
-      "text": "Localización del dolor",
-      "showIf": {
-        "question": "q_pain_level",
-        "equals": "10"
-      },
+      "text": "6️⃣ Problemas vasculares: ¿Ha tenido problemas de circulación?",
       "options": [
-        "Cabeza",
-        "Pecho",
-        "Abdomen",
-        "Espalda",
-        "Extremidades",
-        "Otro"
+        "No",
+        "Varices",
+        "Trombosis",
+        "Insuficiencia venosa",
+        "Otros"
       ]
     },
     {
-      "id": "q_red_flags",
+      "id": "q_habits",
       "type": "multi",
-      "text": "Signos de alarma (Selecciona si aplica)",
+      "text": "7️⃣ Hábitos: ¿Presenta alguno de los siguientes hábitos?",
       "options": [
-        "Dolor en el pecho",
-        "Dificultad respiratoria",
-        "Mareo intenso",
-        "Fiebre >38ºC",
-        "Ninguna"
+        "No",
+        "Fumador/a",
+        "Exfumador/a",
+        "Consumo habitual de alcohol",
+        "Otras sustancias"
       ]
     },
     {
-      "id": "q_red_flags_now",
-      "type": "single",
-      "text": "¿Te está pasando AHORA mismo?",
-      "showIf": {
-        "question": "q_red_flags",
-        "equals": "Dolor en el pecho"
-      },
-      "options": [
-        "Sí",
-        "No"
-      ]
-    },
-    {
-      "id": "q_red_flags_now_2",
-      "type": "single",
-      "text": "¿Te está pasando AHORA mismo?",
-      "showIf": {
-        "question": "q_red_flags",
-        "equals": "Dificultad respiratoria"
-      },
-      "options": [
-        "Sí",
-        "No"
-      ]
-    },
-    {
-      "id": "q_red_flags_now_3",
-      "type": "single",
-      "text": "¿Te está pasando AHORA mismo?",
-      "showIf": {
-        "question": "q_red_flags",
-        "equals": "Mareo intenso"
-      },
-      "options": [
-        "Sí",
-        "No"
-      ]
-    },
-    {
-      "id": "q_meds_today",
-      "type": "single",
-      "text": "¿Has tomado medicación en las últimas 24h?",
-      "options": [
-        "Sí",
-        "No"
-      ]
-    },
-    {
-      "id": "q_allergies",
-      "type": "single",
-      "text": "¿Alergias conocidas?",
-      "options": [
-        "Sí",
-        "No"
-      ]
-    },
-    {
-      "id": "q_exposure",
+      "id": "q_mental_health",
       "type": "multi",
-      "text": "Exposición Principal en tu puesto",
+      "text": "8️⃣ Salud mental: ¿Ha sido diagnosticado de algún trastorno psicológico?",
       "options": [
-        "Pantallas",
-        "Esfuerzo Físico",
-        "Maquinaria",
-        "Conducción",
-        "Químicos",
-        "Ninguna"
+        "No",
+        "Ansiedad",
+        "Depresión",
+        "Otro trastorno",
+        "Prefiere no responder"
       ]
+    },
+    {
+      "id": "q_additional_info",
+      "type": "single",
+      "text": "9️⃣ Información adicional: ¿Desea añadir algo más relevante sobre su salud?",
+      "options": [
+        "No",
+        "Sí"
+      ]
+    },
+    {
+      "id": "q_additional_text",
+      "type": "text",
+      "text": "Especifique:",
+      "required": false,
+      "maxChars": 300,
+      "showIf": {
+        "question": "q_additional_info",
+        "equals": "Sí"
+      }
     }
   ],
   "modules": [],
