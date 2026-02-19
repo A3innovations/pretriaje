@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { computeTriage } from "@/lib/triage";
+import { GENERATE_DEMO_SESSIONS } from "@/lib/demo";
 
 export async function POST(req: NextRequest) {
     try {

@@ -1,6 +1,7 @@
 import { Campaign, Report, Session } from './types';
 import fs from 'fs';
 import path from 'path';
+import { GET_DEMO_SESSION } from '@/lib/demo';
 
 const DB_FILE_PATH = path.join(process.cwd(), 'data', 'db.json');
 
