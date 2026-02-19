@@ -53,7 +53,9 @@ class InMemoryDB {
             };
             fs.writeFileSync(DB_FILE_PATH, JSON.stringify(data, null, 2));
         } catch (error) {
-            console.error("[DB] Failed to save database:", error);
+            // Check if it's a read-only file system error (common in Vercel)
+            // We log it but don't throw, allowing the app to continue in-memory
+            console.warn("[DB] Failed to save database to disk (running in-memory only):", error);
         }
     }
 
