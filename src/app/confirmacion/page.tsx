@@ -113,134 +113,21 @@ export default function ConfirmationPage() {
             yPos += 8;
         };
 
-        // --- SECTION: CORE ---
-        renderSectionHeader("DATOS GENERALES");
+        // --- SECTION: CORE & MODULES ---
+        renderSectionHeader("HISTORIAL Y DATOS GENERALES");
 
-        // Compact Core Data (2 columns logic)
-        questionsData.core.forEach((q: any) => {
-            if (session.answers[q.id]) {
-                const val = Array.isArray(session.answers[q.id])
-                    ? session.answers[q.id].join(", ")
-                    : String(session.answers[q.id]);
-
-                // Safe Label Printing (multiline if needed, but keeping it simple for now with smaller font or max width)
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(8);
-                doc.setTextColor(100, 116, 139);
-
-                // Split label if too long for the left column (width ~100)
-                const labelLines = doc.splitTextToSize(q.text.toUpperCase(), 95);
-                doc.text(labelLines, margin, yPos);
-
-                // Value Column (Right side, starting at margin + 100)
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(9);
-                doc.setTextColor(15, 23, 42);
-
-                // Calculate height based on Label lines
-                const labelHeight = labelLines.length * 4;
-
-                // Check if value needs split too
-                const valLines = doc.splitTextToSize(val, 80);
-                doc.text(valLines, margin + 105, yPos);
-
-                // Move yPos by the taller of the two
-                const valHeight = valLines.length * 4;
-                yPos += Math.max(labelHeight, valHeight) + 3; // +3 padding
-            }
-        });
-
-        yPos += 5;
-
-        // --- SECTIONS: MODULES ---
-        // Helper to check for risks/red flags
-        const checkRisk = (id: string, val: string) => {
-            const v = val.toLowerCase();
-            // General rule: "Sí" is a risk for symptoms/history
-            // Exceptions: Protection usage, Healthy habits (none in this questionnaire mostly, it's risk focused)
-
-            // Specific Logic
-            if (id === 'qc_1_noise_prot') return v === 'nunca' || v === 'no aplica' || v === 'no'; // Not using protection is risk
-            if (id === 'qe_3_bio_vac_hep' || id === 'qe_3_bio_vac_tet') return v === 'no' || v === 'incompleta'; // No vaxx is risk
-
-            // For most symptoms, diseases, limitations:
-            if (v.startsWith('sí') || v.startsWith('si')) return true;
-            if (v.startsWith('frecuente')) return true;
-            if (v.startsWith('a veces') && (id.includes('dizzyness') || id.includes('seizure') || id.includes('vertigo'))) return true;
-
-            return false;
+        // Helper to strip emojis for PDF (Helvetica doesn't support them)
+        const cleanText = (text: string) => {
+            return text.replace(/[\u{1F600}-\u{1F64F}\u{1F300}-\u{1F5FF}\u{1F680}-\u{1F6FF}\u{1F1E0}-\u{1F1FF}\u{2600}-\u{26FF}\u{2700}-\u{27BF}\u{1F900}-\u{1F9FF}\u{1F100}-\u{1F1FF}\u{FE0F}]/gu, '')
+                .trim();
         };
 
-        // --- SECTIONS: MODULES ---
-        // Helper to draw a row with robust height calculation
-        const printRow = (label: string, value: string, isLast = false, isRisk = false) => {
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9); // Larger, clearer label
-            doc.setTextColor(100, 116, 139); // Slate 500
-
-            // Column Widths
-            const col1X = margin;
-            const col1W = 90;
-            const col2X = margin + 95;
-            const col2W = 80;
-
-            const labelLines = doc.splitTextToSize(label, col1W);
-            const labelHeight = labelLines.length * 5; // Slightly more leading
-
-            doc.setFont("helvetica", "normal"); // Default value font
-            doc.setFontSize(10); // Standard readable size
-
-            if (isRisk) {
-                doc.setFont("helvetica", "bold"); // Bold for risk
-                doc.setTextColor(220, 38, 38);   // Red 600 for risk
-            } else {
-                doc.setTextColor(15, 23, 42);    // Slate 900 normal
-            }
-
-            const valLines = doc.splitTextToSize(value, col2W);
-            const valHeight = valLines.length * 5;
-
-            const rowHeight = Math.max(labelHeight, valHeight) + 8; // Extra padding
-
-            // Page Break Check - STRICT 260mm LIMIT
-            if (yPos + rowHeight > 260) {
-                doc.addPage();
-                yPos = 30; // Reset top
-            }
-
-            // Draw Label
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(9);
-            doc.setTextColor(100, 116, 139);
-            doc.text(labelLines, col1X, yPos + 4);
-
-            // Draw Value
-            if (isRisk) {
-                doc.setFont("helvetica", "bold");
-                doc.setTextColor(220, 38, 38);
-            } else {
-                doc.setFont("helvetica", "normal");
-                doc.setTextColor(15, 23, 42);
-            }
-            doc.text(valLines, col2X, yPos + 4);
-
-            // Divider Line
-            if (!isLast) {
-                doc.setDrawColor(241, 245, 249); // Very light slate
-                doc.line(col1X, yPos + rowHeight - 2, 210 - margin, yPos + rowHeight - 2);
-            }
-
-            yPos += rowHeight;
-        };
-
-        // --- SECTIONS: MODULES ---
-        // Combine Core + Modules into a single predictable flow since User asked for "well structured"
-
-        // 1. Datos Generales
+        // 1. Datos Generales (Core)
         questionsData.core.forEach((q: any) => {
             if (session.answers[q.id] && q.type !== 'info') {
-                // Use Question text as is
-                let label = q.text;
+                // Remove emoji from label
+                let label = cleanText(q.text);
+
                 const val = Array.isArray(session.answers[q.id])
                     ? session.answers[q.id].join(", ")
                     : String(session.answers[q.id]);
